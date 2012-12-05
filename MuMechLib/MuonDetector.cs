@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using MuMech;
 
 public class MuMechMuonDetector : Part
 {
@@ -137,7 +138,7 @@ public class MuMechMuonDetector : Part
                 winPos = new Rect(Screen.width / 2, Screen.height / 2, 10, 10);
             }
 
-            GUI.skin = HighLogic.Skin;
+            GUI.skin = MuUtils.DefaultSkin;
 
             winPos = GUILayout.Window(891, winPos, WindowGUI, "Muon Detector", GUILayout.MinWidth(120));
         }

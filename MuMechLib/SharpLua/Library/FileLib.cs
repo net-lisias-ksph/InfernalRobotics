@@ -133,7 +133,7 @@ namespace SharpLua.Library
         public static LuaValue Seek(LuaValue[] values)
         {
             LuaUserdata data = values[0] as LuaUserdata;
-            Stream stream = null;
+            MemoryStream stream = null;
 
             TextWriter writer = data.Value as TextWriter;
             if (writer != null)

@@ -353,7 +353,7 @@ namespace MuMech
         public override void drawGUI(int baseWindowID)
         {
 
-            GUI.skin = HighLogic.Skin;
+            GUI.skin = MuUtils.DefaultSkin;
 
             windowPos = GUILayout.Window(baseWindowID, windowPos, WindowGUI, "Landing Autopilot", GUILayout.Width(320), GUILayout.Height(100));
 
@@ -898,7 +898,7 @@ namespace MuMech
                 {
                     s.mainThrottle = 0.0F;
                     core.attitudeTo(Vector3d.back, MechJebCore.AttitudeReference.ORBIT, this);
-                    core.warpIncrease(this);
+                    if (part.vessel.orbit.period / TimeWarp.CurrentRate > 60) core.warpIncrease(this);
                 }
 
                 landStatusString = "Moving to deorbit burn point";
@@ -1053,15 +1053,15 @@ namespace MuMech
 
             if ((TimeWarp.WarpMode == TimeWarp.Modes.HIGH) && (TimeWarp.CurrentRate > TimeWarp.MaxPhysicsRate)) core.warpPhysics(this);
 
-            //for atmosphere landings, let the air decelerate us
-            if (part.vessel.mainBody.maxAtmosphereAltitude > 0)
+            //for thick atmosphere landings, let the air decelerate us
+            if (atmosphereIsThick())
             {
                 landStatusString = "Decelerating";
 
                 s.mainThrottle = 0;
                 core.attitudeTo(Vector3.back, MechJebCore.AttitudeReference.SURFACE_VELOCITY, this);
 
-                //skip deceleration burn and kill-horizontal-velocity for kerbin landings
+                //skip deceleration burn and kill-horizontal-velocity for thick atmosphere landings
                 if (vesselState.altitudeASL < decelerationEndAltitudeASL) landStep = LandStep.FINAL_DESCENT;
                 return;
             }
@@ -1146,9 +1146,9 @@ namespace MuMech
 
         double courseCorrectionsAccuracyTargetKm()
         {
-            if (part.vessel.mainBody.maxAtmosphereAltitude > 0)
+            if (atmosphereIsThick())
             {
-                //kerbin landings
+                //atmo landings seem less certain than vacuum landings: allow for more jitter in the predictions
                 if (vesselState.altitudeASL > part.vessel.mainBody.maxAtmosphereAltitude) return 1.0;
                 else return 0.3;
             }
@@ -1235,43 +1235,83 @@ namespace MuMech
         // POWERED LANDINGS ///////////////////
         ///////////////////////////////////////
 
+        void predictedLandingCoordinates(out double predictedLandingLatitude, out double predictedLandingLongitude)
+        {
+            predictedLandingLatitude = targetLatitude;
+            predictedLandingLongitude = targetLongitude;
+            if (prediction != null && prediction.outcome == LandingPrediction.Outcome.LANDED)
+            {
+                predictedLandingLatitude= prediction.landingLatitude;
+                predictedLandingLongitude = prediction.landingLongitude;
+            }
+        }
 
+        Vector3d predictedLandingSitePosition()
+        {
+            double lat;
+            double lon;
+            predictedLandingCoordinates(out lat, out lon);
+            return part.vessel.mainBody.GetWorldSurfacePosition(lat, lon, predictedLandingSiteTerrainAltitude());
+        }
+
+        double predictedLandingSiteTerrainAltitude()
+        {
+            double lat;
+            double lon;
+            predictedLandingCoordinates(out lat, out lon);
+            return ARUtils.PQSSurfaceHeight(lat, lon, part.vessel.mainBody);
+        }
 
 
         double chooseDecelerationEndAltitudeASL()
         {
-            if (part.vessel.mainBody.maxAtmosphereAltitude > 0)
+            if (atmosphereIsThick())
             {
-                if (prediction != null && prediction.outcome == LandingPrediction.Outcome.LANDED)
-                {
-                    return 2000 + ARUtils.PQSSurfaceHeight(prediction.landingLatitude, prediction.landingLongitude, part.vessel.mainBody);
-                }
-                else
-                {
-                    return 2000 + ARUtils.PQSSurfaceHeight(targetLatitude, targetLongitude, part.vessel.mainBody);
-                }
+                //if the atmosphere is thick, deceleration (meaning freefall through the atmosphere)
+                //should end a safe height above the landing site in order to allow braking from terminal velocity
+                double landingSiteDragLength = ARUtils.characteristicDragLength(predictedLandingSitePosition(), vesselState.massDrag / vesselState.mass, part.vessel.mainBody);
+                return 2 * landingSiteDragLength + predictedLandingSiteTerrainAltitude();
             }
             else
             {
-                if (prediction != null && prediction.outcome == LandingPrediction.Outcome.LANDED)
-                {
-                    return 500 + ARUtils.PQSSurfaceHeight(prediction.landingLatitude, prediction.landingLongitude, part.vessel.mainBody);
-                }
-                else
-                {
-                    return 500 + ARUtils.PQSSurfaceHeight(targetLatitude, targetLongitude, part.vessel.mainBody);
-                }
-
-
+                //if the atmosphere is thin, the deceleration burn should end
+                //500 meters above the landing site to allow for a controlled final descent
+                return 500 + predictedLandingSiteTerrainAltitude();
             }
         }
 
-        //the deceleration phase gradually decelerates to come to a hover at 2000m ASL
+        //On planets with thick enough atmospheres, we shouldn't do a deceleration burn. Rather,
+        //we should let the atmosphere decelerate us and only burn during the final descent to
+        //ensure a safe touchdown speed. How do we tell if the atmosphere is thick enough? We check
+        //to see if there is an altitude within the atmosphere for which the characteristic distance
+        //over which drag slows the ship is smaller than the altitude above the terrain. If so, we can
+        //expect to get slowed to near terminal velocity before impacting the ground. 
+        bool atmosphereIsThick()
+        {
+            //The air density goes like exp(-h/(scale height)), so the drag length goes like exp(+h/(scale height)).
+            //Some math shows that if (scale height) > e * (surface drag length) then 
+            //there is an altitude at which (altitude) > (drag length at that altitude)
+            double seaLevelDragLength = ARUtils.characteristicDragLength(part.vessel.mainBody.GetWorldSurfacePosition(0, 0, 0), vesselState.massDrag / vesselState.mass, part.vessel.mainBody);
+            return (1000 * part.vessel.mainBody.atmosphereScaleHeight > 2.71828 * seaLevelDragLength);
+        }
+ 
+
+        //the deceleration phase gradually decelerates to come to a hover at the altitude given by chooseDecelerationEndAltitudeASL()
         //this function gives the speed of the vessel as a function of altitude for the deceleration phase
         double decelerationSpeed(double altitudeASL, double thrustAcc, CelestialBody body)
         {
             //I think it should never be necessary to decelerate above 2000m when landing on kerbin
-            if (body.maxAtmosphereAltitude > 0 && altitudeASL > 2000) return Double.MaxValue;
+            //if (body.maxAtmosphereAltitude > 0 && altitudeASL > 2000) return Double.MaxValue;
+
+            //if the user hasn't engaged the landing autopilot, assume a completely uncontrolled reentry:
+            if (!autoLandAtTarget) return Double.MaxValue;
+
+            //If the atmosphere is thick, don't bother decelerating until we're within a scale height of the ground:
+            if (atmosphereIsThick() && altitudeASL > decelerationEndAltitudeASL)
+            {
+                return Double.MaxValue;
+            }
+
 
             double surfaceGravity = ARUtils.G * body.Mass / Math.Pow(body.Radius, 2);
             if (thrustAcc < surfaceGravity)

@@ -17,10 +17,6 @@ public class MuMechModuleHullCamera : PartModule
     public bool camEnabled = true;
 
     [KSPField]
-    public string cameraKeyPrev = "f7";
-    [KSPField]
-    public string cameraKeyNext = "f8";
-    [KSPField]
     public string cameraName = "Hull";
 
     public static List<MuMechModuleHullCamera> cameras = new List<MuMechModuleHullCamera>();
@@ -31,6 +27,7 @@ public class MuMechModuleHullCamera : PartModule
     protected static Transform origParent = null;
     protected static float origFoV;
     protected static float origClip;
+    protected static Texture2D overlayTex = null;
 
     public void toMainCamera()
     {
@@ -109,6 +106,54 @@ public class MuMechModuleHullCamera : PartModule
         }
     }
 
+    [KSPAction("Toggle Camera")]
+    public void ToggleCamera(KSPActionParam ap)
+    {
+        ActivateCamera();
+    }
+
+    [KSPAction("Next Camera")]
+    public void NextCamera(KSPActionParam ap)
+    {
+        if (currentCamera != null)
+        {
+            int curCam = cameras.IndexOf(currentCamera);
+            if (curCam + 1 >= cameras.Count)
+            {
+                toMainCamera();
+            }
+            else
+            {
+                cameras[curCam + 1].ActivateCamera();
+            }
+        }
+        else
+        {
+            cameras.First().ActivateCamera();
+        }
+    }
+
+    [KSPAction("Previous Camera")]
+    public void PreviousCamera(KSPActionParam ap)
+    {
+        if (currentCamera != null)
+        {
+            int curCam = cameras.IndexOf(currentCamera);
+            if (curCam < 1)
+            {
+                toMainCamera();
+            }
+            else
+            {
+                cameras[curCam - 1].ActivateCamera();
+            }
+        }
+        else
+        {
+            cameras.Last().ActivateCamera();
+        }
+    }
+
     public override void OnLoad(ConfigNode node)
     {
         base.OnLoad(node);
@@ -152,7 +197,7 @@ public class MuMechModuleHullCamera : PartModule
         if (currentHandler == this)
         {
             cameras.RemoveAll(item => item == null);
-            
+            /*
             if (Input.GetKeyUp(cameraKeyNext))
             {
                 if (currentCamera != null)
@@ -192,6 +237,7 @@ public class MuMechModuleHullCamera : PartModule
                     cameras.Last().ActivateCamera();
                 }
             }
+            */
         }
         
         if ((currentCamera == this) && adjustMode) {

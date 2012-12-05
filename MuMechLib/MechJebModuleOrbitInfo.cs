@@ -19,7 +19,7 @@ namespace MuMech
 
         public override GUILayoutOption[] windowOptions()
         {
-            return new GUILayoutOption[] { GUILayout.Width((core.targetType != MechJebCore.TargetType.NONE)?310:210) };
+            return new GUILayoutOption[] { GUILayout.Width((FlightGlobals.fetch.VesselTarget != null)?310:210) };
         }
 
         protected override void WindowGUI(int windowID)
@@ -72,7 +72,7 @@ namespace MuMech
             GUILayout.Label(ARUtils.clampDegrees360(vesselState.angleToPrograde + (showingRetrograde?180:0)).ToString("F3") + "°");
             GUILayout.EndVertical();
 
-            if (core.targetType != MechJebCore.TargetType.NONE)
+            if (FlightGlobals.fetch.VesselTarget != null)
             {
                 GUILayout.BeginVertical();
                 if (core.targetName().Length > 10)

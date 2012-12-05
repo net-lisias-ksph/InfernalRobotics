@@ -79,7 +79,7 @@ namespace MuMech
 
         void Update()
         {
-            while (server.Pending())
+            while (server.Server.IsBound && server.Pending())
             {
                 SocketStateObject newConn = new SocketStateObject();
                 newConn.socket = server.AcceptSocket();
@@ -111,7 +111,7 @@ namespace MuMech
                     string tmp = client.sb.ToString();
                     if (tmp.Contains("\n"))
                     {
-                        string[] pcs = tmp.Replace("\r", "").Split(char.Parse("\n"));
+                        string[] pcs = tmp.Replace("\r", "").Split('\n');
                         foreach (string line in pcs.Take(pcs.Length - 1))
                         {
                             try

@@ -88,8 +88,8 @@ namespace MuMech
                     parts = part.vessel.parts;
                     surfaceGravity = part.vessel.mainBody.GeeASL * 9.81;
                 }
-                ffa.analyze(parts, surfaceGravity, FuelFlowAnalyzer.Environment.ATMOSPHERE, out timePerStageAtmo, out deltaVPerStageAtmo, out twrPerStage);
-                ffa.analyze(parts, surfaceGravity, FuelFlowAnalyzer.Environment.VACUUM, out timePerStageVac, out deltaVPerStageVac, out twrPerStage);
+                ffa.analyze(parts, (float)surfaceGravity, 1.0F, out timePerStageAtmo, out deltaVPerStageAtmo, out twrPerStage);
+                ffa.analyze(parts, (float)surfaceGravity, 0.0F, out timePerStageVac, out deltaVPerStageVac, out twrPerStage);
                 s.Stop();
 
                 nextSimulationDelayMs = 10 * s.ElapsedMilliseconds;
@@ -159,7 +159,7 @@ namespace MuMech
 
             GUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
             GUILayout.Label("Total mass", GUILayout.ExpandWidth(true));
-            GUILayout.Label(vesselState.mass.ToString("F1") + " tons", txtR);
+            GUILayout.Label(vesselState.mass.ToString("F2") + " tons", txtR);
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal(GUILayout.ExpandWidth(true));
@@ -204,7 +204,7 @@ namespace MuMech
             {
                 runSimulations();
 
-                GUI.skin = HighLogic.Skin;
+                GUI.skin = MuUtils.DefaultSkin;
                 if (buildSceneMinimized)
                 {
                     windowPos = GUILayout.Window(872035, windowPos, buildSceneWindowGUI, "Vessel Info", minimizedWindowOptions());
@@ -235,7 +235,21 @@ namespace MuMech
                 if (part.physicalSignificance != Part.PhysicalSignificance.NONE)
                 {
                     mass += part.mass;
+                    foreach (PartResource r in part.Resources) mass += r.amount * ARUtils.resourceDensity(r.info.id);
                 }
+
+                //In the VAB, ModuleJettison (which adds fairings) forgets to subtract the fairing mass from
+                //the part mass if the engine does have a fairing, so we have to do this manually
+                if (part.vessel == null //hacky way to tell whether we're in the VAB
+                    && (part.Modules.OfType<ModuleJettison>().Count() > 0))
+                {
+                    ModuleJettison jettison = part.Modules.OfType<ModuleJettison>().First();
+                    if (part.findAttachNode(jettison.bottomNodeName).attachedPart == null)
+                    {
+                        mass -= jettison.jettisonedObjectMass;
+                    }
+                }
+
             }
 
             double TWR = 0;
@@ -359,7 +373,7 @@ namespace MuMech
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.FlexibleSpace();
-                    GUILayout.Label(String.Format("{0:0} s", timePerStageAtmo[stage]), txtR);
+                    GUILayout.Label(formatTime(timePerStageAtmo[stage]), txtR);
                     GUILayout.EndHorizontal();
                 }
             }
@@ -393,13 +407,43 @@ namespace MuMech
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.FlexibleSpace();
-                    GUILayout.Label(String.Format("{0:0} s", timePerStageVac[stage]), txtR);
+                    GUILayout.Label(formatTime(timePerStageVac[stage]), txtR);
                     GUILayout.EndHorizontal();
                 }
             }
             GUILayout.EndVertical();
 
             GUILayout.EndHorizontal();
+        }
+
+
+        static String formatTime(float seconds)
+        {
+            if (seconds < 300)
+            {
+                return String.Format("{0:0} s", seconds);
+            }
+            else if (seconds < 3600)
+            {
+                int minutes = (int)(seconds / 60);
+                float remainingSeconds = seconds - 60 * minutes;
+                return String.Format("{0:0}:{1:00}", minutes, remainingSeconds);
+            }
+            else if (seconds < 3600 * 24)
+            {
+                int hours = (int)(seconds / 3600);
+                int minutes = (int)((seconds - 3600 * hours) / 60);
+                float remainingSeconds = seconds - 3600 * hours - 60 * minutes;
+                return String.Format("{0:0}:{1:00}:{2:00}", hours, minutes, remainingSeconds);
+            }
+            else
+            {
+                int days = (int)(seconds / (3600 * 24));
+                int hours = (int)((seconds - days*3600*24) / 3600);
+                int minutes = (int)((seconds - days*3600*24 - 3600 * hours) / 60);
+                float remainingSeconds = seconds - days*3600*24 - 3600 * hours - 60 * minutes;
+                return String.Format("{0:0}:{1:00}:{2:00}:{3:00}", days, hours, minutes, remainingSeconds);
+            }
         }
     }
 }

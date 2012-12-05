@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using UnityEngine;
 using MuMech;
 
@@ -177,11 +178,17 @@ namespace MuMech
             {
                 if (p.physicalSignificance != Part.PhysicalSignificance.NONE)
                 {
-                    mass += p.mass;
-                    massDrag += p.mass * p.maximum_drag;
+                    double partMass = p.mass;
+                    foreach (PartResource r in p.Resources)
+                    {
+                        partMass += r.amount * ARUtils.resourceDensity(r.info.id);
+                    }
+                    mass += partMass;
+                    massDrag += partMass * p.maximum_drag;
                 }
+
                 MoI += p.Rigidbody.inertiaTensor;
-                if (((p.State == PartStates.ACTIVE) || ((Staging.CurrentStage > Staging.lastStage) && (p.inverseStage == Staging.lastStage))) && ((p is LiquidEngine) || (p is LiquidFuelEngine) || (p is SolidRocket) || (p is AtmosphericEngine)))
+                if (((p.State == PartStates.ACTIVE) || ((Staging.CurrentStage > Staging.lastStage) && (p.inverseStage == Staging.lastStage))) && ((p is LiquidEngine) || (p is LiquidFuelEngine) || (p is SolidRocket) || (p is AtmosphericEngine) || p.Modules.Contains("ModuleEngines")))
                 {
                     if (p is LiquidEngine && ARUtils.engineHasFuel(p))
                     {
@@ -216,6 +223,26 @@ namespace MuMech
                         if (((AtmosphericEngine)p).thrustVectoringCapable)
                         {
                             torqueThrustPYAvailable += Math.Sin(Math.Abs(((AtmosphericEngine)p).gimbalRange) * Math.PI / 180) * ((AtmosphericEngine)p).maximumEnginePower * ((AtmosphericEngine)p).totalEfficiency * (p.Rigidbody.worldCenterOfMass - CoM).magnitude;
+                        }
+                    }
+                    else if (p.Modules.Contains("ModuleEngines"))
+                    {
+                        foreach (PartModule pm in p.Modules)
+                        {
+                            if ((pm is ModuleEngines) && (pm.isEnabled) && ARUtils.engineHasFuel(p))
+                            {
+                                ModuleEngines e = (ModuleEngines)pm;
+                                double usableFraction = 1; // Vector3d.Dot((p.transform.rotation * e.thrustTransform.forward).normalized, forward); // TODO: Fix usableFraction
+                                thrustAvailable += e.maxThrust * usableFraction;
+
+                                if (e.throttleLocked) thrustMinimum += e.maxThrust * usableFraction;
+                                else thrustMinimum += e.minThrust * usableFraction;
+                                
+                                if (p.Modules.OfType<ModuleGimbal>().Count() > 0)
+                                {
+                                    torqueThrustPYAvailable += Math.Sin(Math.Abs(p.Modules.OfType<ModuleGimbal>().First().gimbalRange) * Math.PI / 180) * e.maxThrust * (p.Rigidbody.worldCenterOfMass - CoM).magnitude; // TODO: close enough?
+                                }
+                            }
                         }
                     }
                 }

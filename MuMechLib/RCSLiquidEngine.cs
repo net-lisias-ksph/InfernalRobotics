@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using MuMech;
 
 public class MuMechRCSLiquidEngineGroup
 {
@@ -81,7 +82,7 @@ public class MuMechRCSLiquidEngine : LiquidEngine
                 winPos = new Rect(Screen.width / 2, Screen.height / 2, 10, 10);
             }
 
-            GUI.skin = HighLogic.Skin;
+            GUI.skin = MuUtils.DefaultSkin;
 
             winPos = GUILayout.Window(12345, winPos, WindowGUI, "Engine control", GUILayout.MinWidth(150));
         }

@@ -544,6 +544,7 @@ namespace MuMech
             {
                 totalDVExpended += vesselState.deltaT * vesselState.thrustAccel(s.mainThrottle);
                 gravityLosses += vesselState.deltaT * Vector3d.Dot(-vesselState.velocityVesselSurfaceUnit, vesselState.gravityForce);
+                //below line looks wrong. centrifugal acceleration is w^2 r, not f^2 r
                 gravityLosses -= vesselState.deltaT * Vector3d.Dot(vesselState.velocityVesselSurfaceUnit, vesselState.up * vesselState.radius * Math.Pow(1 / part.vessel.mainBody.rotationPeriod, 2));
                 steeringLosses += vesselState.deltaT * vesselState.thrustAccel(s.mainThrottle) * (1 - Vector3.Dot(vesselState.velocityVesselSurfaceUnit, vesselState.forward));
                 dragLosses += vesselState.deltaT * ARUtils.computeDragAccel(vesselState.CoM, vesselState.velocityVesselOrbit, vesselState.massDrag / vesselState.mass, part.vessel.mainBody).magnitude;
@@ -779,7 +780,7 @@ namespace MuMech
             if (Vector3d.Dot(vesselState.velocityVesselOrbit, vesselState.up) < 0) //if we have started to descend, i.e. reached apoapsis, circularize
             {
                 mode = AscentMode.CIRCULARIZE;
-                if (TimeWarp.CurrentRateIndex != 0) TimeWarp.SetRate(0, false);
+                core.warpMinimum(this);
                 return;
             }
 
@@ -820,7 +821,12 @@ namespace MuMech
             else if (autoWarpToApoapsis)
             {
                 //if we're allowed to autowarp, do so
-                core.warpTo(this, part.vessel.orbit.timeToAp, lookaheadTimes);
+                //this if statement tries to squash a bug where the AP increases warp just as it passes Ap,
+                //which slightly messes up the start of the circularization burn
+                if (part.vessel.orbit.timeToAp > 10 && (part.vessel.orbit.period - part.vessel.orbit.timeToAp) > 10)
+                {
+                    core.warpTo(this, part.vessel.orbit.timeToAp, lookaheadTimes);
+                }
             }
 
             //if we are out of the atmosphere and have a high enough apoapsis and aren't near apoapsis, play dead to 
@@ -911,7 +917,7 @@ namespace MuMech
 
         public override void drawGUI(int baseWindowID)
         {
-            GUI.skin = HighLogic.Skin;
+            GUI.skin = MuUtils.DefaultSkin;
             if (minimized)
             {
                 windowPos = GUILayout.Window(baseWindowID, windowPos, WindowGUI, "Ascent", GUILayout.Width(100), GUILayout.Height((choosingRendezvousTarget ? 600 : 30)));
@@ -1212,14 +1218,6 @@ namespace MuMech
             GUILayout.Label(String.Format("{0:0.0} tons", launchMass));
             GUILayout.EndHorizontal();
 
-
-            /*            GUILayout.Label(String.Format("Total Δv expended: {0:0} m/s", totalDVExpended));
-                        GUILayout.Label(String.Format("Gravity losses: {0:0} m/s ({1:0.0}%)", gravityLosses, (totalDVExpended == 0 ? 0 : gravityLosses / totalDVExpended * 100)));
-                        GUILayout.Label(String.Format("Drag losses: {0:0} m/s ({1:0.0}%)", dragLosses, (totalDVExpended == 0 ? 0 : dragLosses / totalDVExpended * 100)));
-                        GUILayout.Label(String.Format("Steering losses: {0:0} m/s ({1:0.0}%)", steeringLosses, (totalDVExpended == 0 ? 0 : steeringLosses / totalDVExpended * 100)));
-                        GUILayout.Label(String.Format("Speed gained: {0:0} m/s ({1:0.0}%)", vesselState.velocityVesselSurface.magnitude, (totalDVExpended == 0 ? 0 : vesselState.speedSurface / totalDVExpended * 100)));
-                        GUILayout.Label(String.Format("Launch mass: {0:0.0} tons", launchMass));
-              */
             if (mode == AscentMode.DISENGAGED && !part.vessel.Landed)
             {
                 GUILayout.BeginHorizontal();
@@ -1269,8 +1267,9 @@ namespace MuMech
                                                          out gravityTurnEndPitchString, gravityTurnEndPitch);
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Turn shape: ");
+            GUILayout.Label(String.Format("Turn shape: {0:0}%", (int)(100*gravityTurnShapeExponent)));
             gravityTurnShapeExponent = GUILayout.HorizontalSlider((float)gravityTurnShapeExponent, 0.0F, 1.0F);
+
             GUILayout.EndHorizontal();
 
             GUILayout.Box(pathTexture);
@@ -1412,7 +1411,6 @@ namespace MuMech
         public override void onFlightStart()
         {
             updatePathTexture();
-            part.vessel.orbitDriver.OnReferenceBodyChange += new OrbitDriver.CelestialBodyDelegate(this.handleReferenceBodyChange);
         }
 
 
@@ -1430,19 +1428,6 @@ namespace MuMech
                 minimized = false;
             }
         }
-
-
-        public override void onFlightStateLoad(Dictionary<string, KSPParseable> parsedData)
-        {
-            //load settings
-        }
-
-        public override void onFlightStateSave(Dictionary<string, KSPParseable> partDataCollection)
-        {
-            //save settings
-
-        }
-
 
 
         public override String getName()

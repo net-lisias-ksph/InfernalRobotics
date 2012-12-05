@@ -16,893 +16,259 @@ namespace MuMech
             return "Rendezvous Module";
         }
 
-        //advanced autopilot capabilities can be turned on or off in the .cfg file with the automation variable.
-        public bool automation = true;
+        String statusString = "";
 
-        #region UI State
-
-        protected Rect WindowPos;
-
-        private Vector2 _scrollPosition = new Vector2(0, 0);
-
-        public enum UIMode
-        {
-            OFF,
-            TARGET_SELECTION,
-            SELECTED,
-            RENDEZVOUS,
-            ALIGN,
-            SYNC
-        }
-
-        protected static string[] sel_texts = { "Bodies", "Debris", "Vessels" };
-        public enum TgtMode
-        {
-            BODIES,
-            DEBRIS,
-            VESSELS
-        }
-        public TgtMode TargetMode = TgtMode.BODIES;
-        private UIMode _mode = UIMode.TARGET_SELECTION;
-        private bool _modeChanged;
-
-        public UIMode Mode
-        {
-            get { return _mode; }
-            set
-            {
-                if (_mode == value)
-                    return;
-
-                _mode = value;
-                _modeChanged = true;
-            }
-        }
-
-        private int _selectedFlyMode;
-
-        /// <summary>
-        /// The selected vessel's location in FlightGlobals.Vessels[LIST].
-        /// </summary>
-        private int _selectedVesselIndex;
-
-        /// <summary>
-        /// Unique Instance ID of selected vessel
-        /// </summary>
-        private int _selectedVesselInstanceId;
-
-        NavBall navball;
-        Transform defaultPurpleWaypoint;
-        bool waypointHijacked = false;
-
-        #endregion
-
-        #region Sync State
-
-        private const int NumberOfPredictedSyncPoints = 4;
-
-        public enum SynchronizationType
-        {
-            TargetPeriapsis,
-            TargetApoapsis,
-            ShipPeriapsis,
-            ShipApoapsis
-        }
-
-        public SynchronizationType SyncMode = SynchronizationType.TargetPeriapsis;
-        private double _minimumPredictedTimeFromTarget;
-        private double _rendezvousAnomaly = 180;
-        private readonly float[] _shipTimeToRendezvous = new float[4];
-        private readonly float[] _targetTimeToRendezvous = new float[4];
-        private readonly string[] _syncString = new string[4];
-        private int _closestApproachOrbit;
-        private double _rendezvousRecalculationTimer;
-
-        #endregion
-
-        #region Auto Align State
-
-        private bool _autoAlign = false;
-        private bool _autoAlignBurnTriggered = false;
-
-        #endregion
-
-        #region Orbit Phaser State
-
-        private bool _autoPhaser = false;
-
-        private enum AutoPhaserState
-        {
-            // To auto sync:
-            // (I believe apo/peri can be swapped through this.)
-            // 1. Wait till we hit apoapsis of target.
-            Step1WaitForTargetApsis,
-            // 2. Burn to match periapsis of target.
-            Step2BurnToMatchNextApsis,
-            // 3. Wait till we hit periapsis.
-            Step3WaitForTargetApsis,
-            // 4. Accelerate until one of next N orbits has a rendezvous time match.
-            Step4BurnToRendezvous,
-            // 5. Wait till we hit that time.
-            Step5WaitForRendezvous,
-            // 6. Match orbital velocity with target.
-            Step6BurnToMatchVelocity
-        };
-
-        private AutoPhaserState _autoPhaserState;
-        private double _autoPhaserVelocityGoal;
-
-        private bool _autoPhaseBurnComplete = false;
-        #endregion
+        //        bool comeAlongside = false;
+        bool autoAlign = false;
+        bool autoAlignBurnTriggered = false;
+        bool autoAlignDidBurn = false;
+        Vector3 autoAlignBurnDirection;
 
         #region Rendezvous State
 
-        private Vector3 _relativeVelocity;
-        private float _relativeInclination;
-        private Vector3 _vectorToTarget;
-        private float _targetDistance;
+        //        private Vector3 _relativeVelocity;
+        //private float _relativeInclination = 0;
+        //        private Vector3 _vectorToTarget;
+        //        private float _targetDistance;
 
-        private bool _killRelativeVelocity = false;
-        private Vector3 _localRelativeVelocity = Vector3.zero;
+        //private bool _killRelativeVelocity = false;
+        //private Vector3 _localRelativeVelocity = Vector3.zero;
 
-        private bool _homeOnRelativePosition = false;
-        private Vector3 _localRelativePosition = Vector3.zero;
+        //private bool _homeOnRelativePosition = false;
+        //private Vector3 _localRelativePosition = Vector3.zero;
 
         #endregion
 
-        #region Warp State
-        double[] warpLookaheadTimes = new double[] { 0, 10, 20, 25, 50, 500, 5000, 500000 };
-        #endregion
+        double[] warpLookaheadTimes = new double[] { 0, 2.5, 5, 25, 50, 500, 10000, 100000 };
 
-        #region FlyByWire PID Controller State
-        public enum Orient
+
+        public override GUILayoutOption[] windowOptions()
         {
-            Off,
-            RelativeVelocity,
-            RelativeVelocityAway,
-            Target,
-            TargetAway,
-            Normal,
-            AntiNormal,
-            MatchTarget,
-            MatchTargetAway,
-            Prograde,
-            Retrograde
+            return new GUILayoutOption[] { GUILayout.Width(300), GUILayout.Height(200) };
         }
-
-        public string[] ControlModeCaptions = new[] { "RVel+", "Rvel-", "TGT+", "TGT-", "Match+", "Match-" };
-
-        public string[] AlignmentCaptions = new[] { "NML\n+", "NML\n-" };
-
-        public Orient PointAt = Orient.Off;
-        private bool _flyByWire;
-        private Vector3 _tgtFwd;
-        private Vector3 _tgtUp;
-        private Vector3 _deriv = Vector3.zero;
-        private Vector3 _integral = Vector3.zero;
-        private Vector3 _headingError = Vector3.zero;
-        private Vector3 _prevErr = Vector3.zero;
-        private Vector3 _act = Vector3.zero;
-
-        public float Kp = 20.0F;
-        public float Ki = 0.0F;
-        public float Kd = 40.0F;
-
-        #endregion
-
-        #region User Interface
 
         protected override void WindowGUI(int windowID)
         {
-            // Set up the UI style.
-            var but = new GUIStyle(GUI.skin.button);
-            but.normal.textColor = but.focused.textColor = Color.white;
-            but.hover.textColor = but.active.textColor = Color.yellow;
-            but.onNormal.textColor = but.onFocused.textColor = but.onHover.textColor = but.onActive.textColor = Color.green;
-            but.padding = new RectOffset(8, 8, 8, 8);
-            var sty = new GUIStyle(GUI.skin.label);
+            if (FlightGlobals.fetch.VesselTarget == null)
+            {
+                GUILayout.Label("Select a target via the map screen.");
+                GUI.DragWindow();
+                return;
+            }
+
+            if (core.targetOrbit().referenceBody != part.vessel.mainBody)
+            {
+                GUILayout.Label("Target (" + core.targetName() + ") is orbiting another body.");
+                GUI.DragWindow();
+                return;
+            }
+
+            //Now we can be sure that there is a target and it's in the same SOI as us.
 
             GUILayout.BeginVertical();
 
-            if (Mode == UIMode.OFF)
-                RenderOffUI(sty, but);
+            GUILayout.Label("Distance: " + MuUtils.ToSI(core.distanceFromTarget(), 3) + "m", GUILayout.Width(300));
 
-            if (Mode == UIMode.TARGET_SELECTION)
-                RenderTargetSelectUI(sty, but);
+            GUILayout.Label("Relative Velocity: " + core.relativeVelocityToTarget().magnitude.ToString("F2") + " m/s");
 
-            if (Mode == UIMode.SELECTED)
-                RenderTargetInfoUI(sty, but);
-            /* used to reroute vessels and debris to old menus
-        if (Mode == UIMode.SELECTED && core.targetType==MechJebCore.TargetType.BODY)
-            RenderTargetInfoUI(sty,but);
-        if (Mode == UIMode.SELECTED && core.targetType!=MechJebCore.TargetType.BODY)
-            RenderSelectedUI(sty,but);
-            */
-            if (Mode == UIMode.ALIGN)
-                RenderAlignUI(sty, but);
+            double closestApproachTime = ARUtils.timeOfClosestApproach(part.vessel.orbit, core.targetOrbit(), vesselState.time);
+            GUILayout.Label("Closest approach in " + MuUtils.ToSI(closestApproachTime - vesselState.time, 3) + "s");
 
-            // TIME TO NODES
-            // BURN TIMER?
-            // DELTA RINC
-            // ORIENTATION FOR NEXT BURN (NORMAL/ANTINORMAL)
-            // AUTOPILOT(NORMAL/ANTINORMAL)
+            double closestApproachDistance = (part.vessel.orbit.getAbsolutePositionAtUT(closestApproachTime) - core.targetOrbit().getAbsolutePositionAtUT(closestApproachTime)).magnitude;
+            GUILayout.Label("Approach distance: " + MuUtils.ToSI(closestApproachDistance, 3) + "m");
 
-            if (Mode == UIMode.SYNC)
-                RenderSyncUI(sty, but);
+            GUILayout.Label("Relative inclination: " + part.vessel.orbit.relativeInclination(core.targetOrbit()).ToString("F2") + "°");
 
-            if (Mode == UIMode.RENDEZVOUS)
-                RenderRendezvousUI(sty, but);
+            GUILayout.Label("Time to AN: " + MuUtils.ToSI(part.vessel.orbit.GetTimeToRelAN(core.targetOrbit()), 3) + "s");
+            GUILayout.Label("Time to DN: " + MuUtils.ToSI(part.vessel.orbit.GetTimeToRelDN(core.targetOrbit()), 3) + "s");
+
+
+
+            //                burnForCollisionCourse = GUILayout.Toggle(burnForCollisionCourse, "Burn to collide");
+
+            /*                if (!comeAlongside && GUILayout.Button("Come alongside"))
+                            {
+                                comeAlongside = true;
+                                core.controlClaim(this);
+                            }
+                            else if (comeAlongside && GUILayout.Button("Stop coming alongside"))
+                            {
+                                comeAlongside = false;
+                                FlightInputHandler.SetNeutralControls();
+                                core.controlRelease(this);
+                            }*/
+
+            if (!autoAlign && GUILayout.Button("Align orbits"))
+            {
+                autoAlign = true;
+                autoAlignBurnTriggered = false;
+                core.controlClaim(this);
+            }
+            else if (autoAlign && GUILayout.Button("Stop aligning orbits"))
+            {
+                autoAlign = false;
+                FlightInputHandler.SetNeutralControls();
+                core.controlRelease(this);
+            }
+
+            if (statusString.Length > 0) GUILayout.Label(statusString);
+
 
             GUILayout.EndVertical();
 
             GUI.DragWindow();
         }
 
-        private void RenderOffUI(GUIStyle sty, GUIStyle but)
-        {
-            if (GUILayout.Button("OPEN", but, GUILayout.ExpandWidth(true)))
-            {
-                Mode = UIMode.TARGET_SELECTION;
-            }
-        }
-
-        private void RenderTargetInfoUI(GUIStyle sty, GUIStyle but)
-        {
-            windowPos = new Rect(windowPos.x, windowPos.y, 10, 10);
-            GUILayout.BeginVertical();
-            if (GUILayout.Button("Back", but))
-            {
-                Mode = UIMode.TARGET_SELECTION;
-                core.setTarget();
-            }
-
-            //align planes data
-            GUILayout.Label("Time to AN : " + part.vessel.orbit.GetTimeToRelAN(core.targetOrbit()).ToString("F2"), sty);
-            GUILayout.Label("Time to DN : " + part.vessel.orbit.GetTimeToRelDN(core.targetOrbit()).ToString("F2"), sty);
-            GUILayout.Label("Relative Inclination :" + (core.targetOrbit().inclination - vesselState.orbitInclination).ToString("F2"), sty);
-
-            //rendevous data
-            if (core.distanceFromTarget() > 10000)
-            {
-                GUILayout.Label("Distance: " + (core.distanceFromTarget() / 1000).ToString("F1") + "km", GUILayout.Width(300));
-            }
-            else
-            {
-                GUILayout.Label("Distance: " + core.distanceFromTarget().ToString("F1") + "m", GUILayout.Width(300));
-            }
-            GUILayout.Label("Relative Velocity: " + core.relativeVelocityToTarget().magnitude.ToString("F2"));
-            GUILayout.EndVertical();
-        }
 
 
 
-        private void RenderTargetSelectUI(GUIStyle sty, GUIStyle but)
-        {
-            GUILayout.Label("Select Target", sty);
-            TargetMode = (TgtMode)GUILayout.SelectionGrid((int)TargetMode, sel_texts, 3, but);
-            _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, GUILayout.Width(300), GUILayout.Height(300));
-            List<Vessel> vesselList = new List<Vessel>(FlightGlobals.Vessels);
-            List<CelestialBody> bodyList = new List<CelestialBody>(FlightGlobals.Bodies);
-
-            switch (TargetMode)
-            {
-                case TgtMode.BODIES:
-                    for (int i = 1; i < bodyList.Count; i++)
+        /*        private void RenderRendezvousUI(GUIStyle sty, GUIStyle but)
+                {
+                    if (!CheckVessel())
                     {
-                        if (bodyList[i].orbit.referenceBody != this.part.vessel.orbit.referenceBody)
-                            continue;
-                        if (GUILayout.Button(bodyList[i].name, but, GUILayout.ExpandWidth(true)))
-                        {
-                            Mode = UIMode.SELECTED;
-                            core.setTarget(bodyList[i]);
-                        }
-
+                        _flyByWire = false;
+                        Mode = UIMode.SELECTED;
                     }
 
-                    break;
+                    Vessel selectedVessel = FlightGlobals.Vessels[_selectedVesselIndex] as Vessel;
 
-                case TgtMode.DEBRIS:
-                    for (int i = 0; i < vesselList.Count; i++)
+                    if (GUILayout.Button(selectedVessel.vesselName, but, GUILayout.ExpandWidth(true)))
                     {
-                        // skip real vessels
-                        if (vesselList[i].isCommandable == true)
-                            continue;
+                        _flyByWire = false;
+                        Mode = UIMode.SELECTED;
+                    }
+                    if (_targetDistance > 10000)
+                    {
+                        GUILayout.Box("Distance: " + (_targetDistance / 1000).ToString("F1") + "km", GUILayout.Width(300));
+                    }
+                    else
+                    {
+                        GUILayout.Box("Distance: " + _targetDistance.ToString("F1") + "m", GUILayout.Width(300));
+                    }
+                    GUILayout.Box("Rel Inc : " + _relativeInclination.ToString("F3"));
+                    GUILayout.Box("Rel VelM: " + _relativeVelocity.magnitude.ToString("F2"));
 
-                        // Skip stuff around other worlds.
-                        if (part.vessel.orbit.referenceBody != vesselList[i].orbit.referenceBody)
-                            continue;
 
-                        if (GUILayout.Button(vesselList[i].vesselName, but, GUILayout.ExpandWidth(true)))
-                        {
-                            Mode = UIMode.SELECTED;
-                            _selectedVesselInstanceId = vesselList[i].GetInstanceID();
-                            _selectedVesselIndex = FlightGlobals.Vessels.IndexOf(vesselList[i]);
-                            core.setTarget(vesselList[i]);
-                        }
+                    // Take the relative velocity and project into ship local space.
+                    _localRelativeVelocity = part.vessel.transform.worldToLocalMatrix.MultiplyVector(_relativeVelocity);
+                    _localRelativePosition = part.vessel.transform.worldToLocalMatrix.MultiplyPoint(selectedVessel.transform.position);
+
+                    if (automation == true)
+                    {
+                        if (GUILayout.Button(_killRelativeVelocity == false ? "Kill Rel Vel" : "FIRING", but, GUILayout.ExpandWidth(true)))
+                            _killRelativeVelocity = !_killRelativeVelocity;
+
+                        if (GUILayout.Button(_homeOnRelativePosition == false ? "Home on Y+ 5m" : "HOMING", but, GUILayout.ExpandWidth(true)))
+                            _homeOnRelativePosition = !_homeOnRelativePosition;
+
+                    }
+                    GUILayout.Box("Rel Vel : " + _localRelativeVelocity.x.ToString("F2") + ", " + _localRelativeVelocity.y.ToString("F2") + ", " + _localRelativeVelocity.z.ToString("F2"));
+                    if (_targetDistance > 10000)
+                    {
+                        GUILayout.Box("Rel Pos : " + (_localRelativePosition.x / 1000).ToString("F2") + "km, " + (_localRelativePosition.y / 1000).ToString("F2") + "km, " + (_localRelativePosition.z / 1000).ToString("F2") + "km");
+                    }
+                    else
+                    {
+                        GUILayout.Box("Rel Pos : " + _localRelativePosition.x.ToString("F2") + ", " + _localRelativePosition.y.ToString("F2") + ", " + _localRelativePosition.z.ToString("F2"));
                     }
 
-                    break;
-                case TgtMode.VESSELS:
-                    var vdc = new VesselDistanceComparer();
-
-                    vdc.OriginVessel = part.vessel;
-
-                    vesselList.Sort(vdc);
-
-                    for (int i = 0; i < vesselList.Count; i++)
+                    if (_flyByWire == false)
                     {
-                        // Skip ourselves.
-                        if (vesselList[i] == part.vessel)
-                            continue;
+                        GUILayout.BeginHorizontal();
 
-                        if (vesselList[i].LandedOrSplashed)
-                            continue;
-
-                        // Skip stuff around other worlds.
-                        if (part.vessel.orbit.referenceBody != vesselList[i].orbit.referenceBody)
-                            continue;
-                        //Skip Debris
-                        if (vesselList[i].isCommandable == false)
-                            continue;
-
-                        // Calculate the distance.
-                        float d = Vector3.Distance(vesselList[i].transform.position, part.vessel.transform.position);
-
-                        if (GUILayout.Button((d / 1000).ToString("F1") + "km " + vesselList[i].vesselName, but,
-                                             GUILayout.ExpandWidth(true)))
+                        if (GUILayout.Button(ControlModeCaptions[0], but, GUILayout.ExpandWidth(true)))
                         {
-                            Mode = UIMode.SELECTED;
-                            _selectedVesselInstanceId = vesselList[i].GetInstanceID();
-                            _selectedVesselIndex = FlightGlobals.Vessels.IndexOf(vesselList[i]);
-                            core.setTarget(vesselList[i]);
+                            _flyByWire = true;
+                            PointAt = Orient.RelativeVelocity;
+                            _modeChanged = true;
+                            _selectedFlyMode = 0;
+                        }
+
+
+                        if (GUILayout.Button(ControlModeCaptions[1], but, GUILayout.ExpandWidth(true)))
+                        {
+                            _flyByWire = true;
+                            PointAt = Orient.RelativeVelocityAway;
+                            _modeChanged = true;
+                            _selectedFlyMode = 1;
+                        }
+
+
+                        if (GUILayout.Button(ControlModeCaptions[2], but, GUILayout.ExpandWidth(true)))
+                        {
+                            _flyByWire = true;
+                            PointAt = Orient.Target;
+                            _modeChanged = true;
+                            _selectedFlyMode = 2;
+                        }
+
+                        GUILayout.EndHorizontal();
+
+                        GUILayout.BeginHorizontal();
+
+                        if (GUILayout.Button(ControlModeCaptions[3], but, GUILayout.ExpandWidth(true)))
+                        {
+                            _flyByWire = true;
+                            PointAt = Orient.TargetAway;
+                            _modeChanged = true;
+                            _selectedFlyMode = 3;
+                        }
+
+                        if (GUILayout.Button(ControlModeCaptions[4], but, GUILayout.ExpandWidth(true)))
+                        {
+                            _flyByWire = true;
+                            PointAt = Orient.MatchTarget;
+                            _modeChanged = true;
+                            _selectedFlyMode = 4;
+                        }
+
+                        if (GUILayout.Button(ControlModeCaptions[5], but, GUILayout.ExpandWidth(true)))
+                        {
+                            _flyByWire = true;
+                            PointAt = Orient.MatchTargetAway;
+                            _modeChanged = true;
+                            _selectedFlyMode = 5;
+                        }
+
+                        GUILayout.EndHorizontal();
+                    }
+
+                    if (_flyByWire)
+                    {
+                        if (GUILayout.Button("Disable " + ControlModeCaptions[_selectedFlyMode], but, GUILayout.ExpandWidth(true)))
+                        {
+                            FlightInputHandler.SetNeutralControls();
+                            _flyByWire = false;
+                            _modeChanged = true;
                         }
                     }
-                    break;
-            }
-            GUILayout.EndScrollView();
-        }
-
-        private void RenderVesselsUI(GUIStyle sty, GUIStyle but)
-        {
-            GUILayout.Box("Select Target", sty);
-
-            _scrollPosition = GUILayout.BeginScrollView(_scrollPosition, GUILayout.Width(300), GUILayout.Height(300));
-
-            // Generate and sort an array of vessels by distance.
-            List<Vessel> vesselList = new List<Vessel>(FlightGlobals.Vessels);
-            var vdc = new VesselDistanceComparer();
-
-            vdc.OriginVessel = part.vessel;
-
-            vesselList.Sort(vdc);
-
-            for (int i = 0; i < vesselList.Count; i++)
-            {
-                // Skip ourselves.
-                if (vesselList[i] == part.vessel)
-                    continue;
-
-                if (vesselList[i].LandedOrSplashed)
-                    continue;
-
-                // Skip stuff around other worlds.
-                if (part.vessel.orbit.referenceBody != vesselList[i].orbit.referenceBody)
-                    continue;
-
-                // Calculate the distance.
-                float d = Vector3.Distance(vesselList[i].transform.position, part.vessel.transform.position);
-
-                if (GUILayout.Button((d / 1000).ToString("F1") + "km " + vesselList[i].vesselName, but,
-                                     GUILayout.ExpandWidth(true)))
-                {
-                    Mode = UIMode.SELECTED;
-                    _selectedVesselInstanceId = vesselList[i].GetInstanceID();
-                    _selectedVesselIndex = FlightGlobals.Vessels.IndexOf(vesselList[i]);
-                    core.setTarget(vesselList[i]);
-                }
-            }
-
-            GUILayout.EndScrollView();
-        }
-
-        private void RenderSelectedUI(GUIStyle sty, GUIStyle but)
-        {
-            if (core.targetType == MechJebCore.TargetType.VESSEL)
-            {
-                if (!CheckVessel())
-                {
-                    _flyByWire = false;
-                    Mode = UIMode.TARGET_SELECTION;
-                }
-            }
-
-            if (GUILayout.Button((FlightGlobals.Vessels[_selectedVesselIndex].vesselName), but, GUILayout.ExpandWidth(true)))
-            {
-                _flyByWire = false;
-                Mode = UIMode.TARGET_SELECTION;
-                core.setTarget();
-            }
-            if (GUILayout.Button("Align Planes", but, GUILayout.ExpandWidth(true)))
-            {
-                Mode = UIMode.ALIGN;
-            }
-            if (GUILayout.Button("Sync Orbits", but, GUILayout.ExpandWidth(true)))
-            {
-                Mode = UIMode.SYNC;
-            }
-            if (GUILayout.Button("Rendezvous", but, GUILayout.ExpandWidth(true)))
-            {
-                Mode = UIMode.RENDEZVOUS;
-            }
-        }
-
-        private void RenderAlignUI(GUIStyle sty, GUIStyle but)
-        {
-            if (!CheckVessel())
-            {
-                _flyByWire = false;
-                Mode = UIMode.SELECTED;
-            }
-
-            if (GUILayout.Button("Align Planes", but, GUILayout.ExpandWidth(true)))
-            {
-                Mode = UIMode.SELECTED;
-                _flyByWire = false;
-            }
-
-            GUILayout.Box("Time to AN : " + part.vessel.orbit.GetTimeToRelAN(FlightGlobals.Vessels[_selectedVesselIndex].orbit).ToString("F2"));
-            GUILayout.Box("Time to DN : " + part.vessel.orbit.GetTimeToRelDN(FlightGlobals.Vessels[_selectedVesselIndex].orbit).ToString("F2"));
-            GUILayout.Box("Relative Inclination :" + _relativeInclination.ToString("F2"));
-            if (automation == true)
-            {
-                if (GUILayout.Button(_autoAlign ? "ALIGNING" : "Auto-Align", but, GUILayout.ExpandWidth(true)))
-                {
-                    _autoAlignBurnTriggered = false;
-                    _autoAlign = !_autoAlign;
-                }
-            }
-            if (_flyByWire == false)
-            {
-                if (GUILayout.Button("Orbit Normal", but, GUILayout.ExpandWidth(true)))
-                {
-                    _flyByWire = true;
-                    PointAt = Orient.Normal;
-                }
-
-                if (GUILayout.Button("Anti Normal", but, GUILayout.ExpandWidth(true)))
-                {
-                    _flyByWire = true;
-                    PointAt = Orient.AntiNormal;
-                }
-            }
-
-            if (_flyByWire)
-            {
-                if (GUILayout.Button("Disable " + PointAt.ToString(), but, GUILayout.ExpandWidth(true)))
-                {
-                    FlightInputHandler.SetNeutralControls();
-                    _flyByWire = false;
-                    _modeChanged = true;
-                }
-            }
-        }
-
-        private void RenderSyncUI(GUIStyle sty, GUIStyle but)
-        {
-            if (!CheckVessel())
-            {
-                _flyByWire = false;
-                Mode = UIMode.SELECTED;
-            }
-
-            if (GUILayout.Button("Sync Orbits", but, GUILayout.ExpandWidth(true)))
-            {
-                Mode = UIMode.SELECTED;
-                _flyByWire = false;
-            }
-
-            GUILayout.EndVertical();
-
-            GUILayout.BeginHorizontal();
-            for (int i = 0; i < NumberOfPredictedSyncPoints; i++)
-            {
-                if (i != (int)SyncMode)
-                    continue;
-
-                if (GUILayout.Button(SyncMode.ToString(), but, GUILayout.ExpandWidth(true)))
-                {
-                    if (i == NumberOfPredictedSyncPoints - 1) SyncMode = 0;
-                    else SyncMode = SyncMode + 1;
-                }
-                //GUILayout.Box(SyncMode.ToString(),but);
-            }
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginVertical();
-
-            GUILayout.Box("Orbit		ShipToR		TgtToR ", GUILayout.ExpandWidth(true));
-            for (int i = 0; i < 4; i++)
-                GUILayout.Box(_syncString[i]);
-
-            GUILayout.Label("Closest Approach on Orbit " + _closestApproachOrbit.ToString(), sty);
-            GUILayout.Label("Min Separation (sec) : " + _minimumPredictedTimeFromTarget.ToString("f1"), sty);
-
-            if (automation == true)
-            {
-                if (GUILayout.Button(_autoPhaser ? _autoPhaserState.ToString() : "Auto Sync", but, GUILayout.ExpandWidth(true)))
-                {
-                    _autoPhaser = !_autoPhaser;
-                    _autoPhaserState = AutoPhaserState.Step1WaitForTargetApsis;
-                }
-            }
-        }
-
-        private void RenderRendezvousUI(GUIStyle sty, GUIStyle but)
-        {
-            if (!CheckVessel())
-            {
-                _flyByWire = false;
-                Mode = UIMode.SELECTED;
-            }
-
-            Vessel selectedVessel = FlightGlobals.Vessels[_selectedVesselIndex] as Vessel;
-
-            if (GUILayout.Button(selectedVessel.vesselName, but, GUILayout.ExpandWidth(true)))
-            {
-                _flyByWire = false;
-                Mode = UIMode.SELECTED;
-            }
-            if (_targetDistance > 10000)
-            {
-                GUILayout.Box("Distance: " + (_targetDistance / 1000).ToString("F1") + "km", GUILayout.Width(300));
-            }
-            else
-            {
-                GUILayout.Box("Distance: " + _targetDistance.ToString("F1") + "m", GUILayout.Width(300));
-            }
-            GUILayout.Box("Rel Inc : " + _relativeInclination.ToString("F3"));
-            GUILayout.Box("Rel VelM: " + _relativeVelocity.magnitude.ToString("F2"));
-
-            // Take the relative velocity and project into ship local space.
-            _localRelativeVelocity = part.vessel.transform.worldToLocalMatrix.MultiplyVector(_relativeVelocity);
-            _localRelativePosition = part.vessel.transform.worldToLocalMatrix.MultiplyPoint(selectedVessel.transform.position);
-
-            if (automation == true)
-            {
-                if (GUILayout.Button(_killRelativeVelocity == false ? "Kill Rel Vel" : "FIRING", but, GUILayout.ExpandWidth(true)))
-                    _killRelativeVelocity = !_killRelativeVelocity;
-
-                if (GUILayout.Button(_homeOnRelativePosition == false ? "Home on Y+ 5m" : "HOMING", but, GUILayout.ExpandWidth(true)))
-                    _homeOnRelativePosition = !_homeOnRelativePosition;
-
-            }
-            GUILayout.Box("Rel Vel : " + _localRelativeVelocity.x.ToString("F2") + ", " + _localRelativeVelocity.y.ToString("F2") + ", " + _localRelativeVelocity.z.ToString("F2"));
-            if (_targetDistance > 10000)
-            {
-                GUILayout.Box("Rel Pos : " + (_localRelativePosition.x / 1000).ToString("F2") + "km, " + (_localRelativePosition.y / 1000).ToString("F2") + "km, " + (_localRelativePosition.z / 1000).ToString("F2") + "km");
-            }
-            else
-            {
-                GUILayout.Box("Rel Pos : " + _localRelativePosition.x.ToString("F2") + ", " + _localRelativePosition.y.ToString("F2") + ", " + _localRelativePosition.z.ToString("F2"));
-            }
-
-            if (_flyByWire == false)
-            {
-                GUILayout.BeginHorizontal();
-
-                if (GUILayout.Button(ControlModeCaptions[0], but, GUILayout.ExpandWidth(true)))
-                {
-                    _flyByWire = true;
-                    PointAt = Orient.RelativeVelocity;
-                    _modeChanged = true;
-                    _selectedFlyMode = 0;
-                }
-
-
-                if (GUILayout.Button(ControlModeCaptions[1], but, GUILayout.ExpandWidth(true)))
-                {
-                    _flyByWire = true;
-                    PointAt = Orient.RelativeVelocityAway;
-                    _modeChanged = true;
-                    _selectedFlyMode = 1;
-                }
-
-
-                if (GUILayout.Button(ControlModeCaptions[2], but, GUILayout.ExpandWidth(true)))
-                {
-                    _flyByWire = true;
-                    PointAt = Orient.Target;
-                    _modeChanged = true;
-                    _selectedFlyMode = 2;
-                }
-
-                GUILayout.EndHorizontal();
-
-                GUILayout.BeginHorizontal();
-
-                if (GUILayout.Button(ControlModeCaptions[3], but, GUILayout.ExpandWidth(true)))
-                {
-                    _flyByWire = true;
-                    PointAt = Orient.TargetAway;
-                    _modeChanged = true;
-                    _selectedFlyMode = 3;
-                }
-
-                if (GUILayout.Button(ControlModeCaptions[4], but, GUILayout.ExpandWidth(true)))
-                {
-                    _flyByWire = true;
-                    PointAt = Orient.MatchTarget;
-                    _modeChanged = true;
-                    _selectedFlyMode = 4;
-                }
-
-                if (GUILayout.Button(ControlModeCaptions[5], but, GUILayout.ExpandWidth(true)))
-                {
-                    _flyByWire = true;
-                    PointAt = Orient.MatchTargetAway;
-                    _modeChanged = true;
-                    _selectedFlyMode = 5;
-                }
-
-                GUILayout.EndHorizontal();
-            }
-
-            if (_flyByWire)
-            {
-                if (GUILayout.Button("Disable " + ControlModeCaptions[_selectedFlyMode], but, GUILayout.ExpandWidth(true)))
-                {
-                    FlightInputHandler.SetNeutralControls();
-                    _flyByWire = false;
-                    _modeChanged = true;
-                }
-            }
-        }
-
-        #endregion
+                }*/
 
         #region Control Logic
 
         /// <summary>
-        /// Checks  if the selected vessel is still where we expect it.
+        /// Checks  if there is a target selected, and that the target is within the same SOI as our vessel.
         /// </summary>
         /// <returns>
-        /// The vessel.
+        /// Whether the above condition holds.
         /// </returns>
-        private bool CheckVessel()
+        private bool CheckTarget()
         {
-            //does Vessels[selVessel] contain a vessel?
-            if (FlightGlobals.Vessels.Count - 1 < _selectedVesselIndex)
-                return false;
-
-            // Does the ID match the vessel selected?
-            int id = FlightGlobals.Vessels[_selectedVesselIndex].GetInstanceID();
-            if (id == _selectedVesselInstanceId)
-                return true;
-
-            // doesn't match, search vessels for matching id
-            for (int i = 0; i < FlightGlobals.Vessels.Count; i++)
-            {
-                id = FlightGlobals.Vessels[i].GetInstanceID();
-                if (id != _selectedVesselInstanceId)
-                    continue;
-
-                // found it!
-                _selectedVesselIndex = i;
-                return true;
-            }
-
-            // Couldn't find it.
-            return false;
+            return (FlightGlobals.fetch.VesselTarget != null) && (core.targetOrbit().referenceBody == part.vessel.mainBody);
         }
 
-        /// <summary>
-        /// Updates the vectors.
-        /// </summary>
-        private void UpdateVectors()
+
+        public override void drive(FlightCtrlState controls)
         {
-            Vector3 up = (part.vessel.findWorldCenterOfMass() - part.vessel.mainBody.position).normalized;
-            Vector3 prograde = part.vessel.orbit.GetRelativeVel().normalized;
+            if (!CheckTarget()) return;
 
-            Vessel selectedVessel = FlightGlobals.Vessels[_selectedVesselIndex] as Vessel;
-
-            _relativeVelocity = selectedVessel.orbit.GetVel() - part.vessel.orbit.GetVel();
-            _vectorToTarget = selectedVessel.transform.position - part.vessel.transform.position;
-            _targetDistance = Vector3.Distance(selectedVessel.transform.position, part.vessel.transform.position);
-            _relativeInclination = (float)selectedVessel.orbit.inclination - (float)part.vessel.orbit.inclination;
-
-            switch (PointAt)
-            {
-                case Orient.RelativeVelocity:
-                    _tgtFwd = _relativeVelocity;
-                    _tgtUp = Vector3.Cross(_tgtFwd.normalized, part.vessel.orbit.vel.normalized);
-                    break;
-                case Orient.RelativeVelocityAway:
-                    _tgtFwd = -_relativeVelocity;
-                    _tgtUp = Vector3.Cross(_tgtFwd.normalized, part.vessel.orbit.vel.normalized);
-                    break;
-                case Orient.Target:
-                    _tgtFwd = _vectorToTarget;
-                    _tgtUp = Vector3.Cross(_tgtFwd.normalized, part.vessel.orbit.vel.normalized);
-                    break;
-                case Orient.TargetAway:
-                    _tgtFwd = -_vectorToTarget;
-                    _tgtUp = Vector3.Cross(_tgtFwd.normalized, part.vessel.orbit.vel.normalized);
-                    break;
-                case Orient.Normal:
-                    _tgtFwd = Vector3.Cross(prograde, up);
-                    _tgtUp = up;
-                    break;
-                case Orient.AntiNormal:
-                    _tgtFwd = -Vector3.Cross(prograde, up);
-                    _tgtUp = up;
-                    break;
-                case Orient.MatchTarget:
-                    _tgtFwd = selectedVessel.transform.up;
-                    _tgtUp = selectedVessel.transform.right;
-                    break;
-                case Orient.MatchTargetAway:
-                    _tgtFwd = -selectedVessel.transform.up;
-                    _tgtUp = selectedVessel.transform.right;
-                    break;
-                case Orient.Prograde:
-                    _tgtFwd = part.vessel.rigidbody.velocity.normalized;
-                    _tgtUp = new Vector3(0, 0, 1);
-                    break;
-                case Orient.Retrograde:
-                    _tgtFwd = -part.vessel.rigidbody.velocity.normalized;
-                    _tgtUp = new Vector3(0, 0, 1);
-                    break;
-            }
-        }
-
-        private void CalculateNearestRendezvousInSeconds(out double timeToRendezvous, out double minDeltaTime)
-        {
-            // Build up the times for apses for the next 4 orbis for the target.
-            Vessel selectedVessel = FlightGlobals.Vessels[_selectedVesselIndex] as Vessel;
-
-            // Find the next few times of apsis for the target and the ship.
-            double targetApoapsisAnomaly = selectedVessel.orbit.TranslateAnomaly(part.vessel.orbit, 180);
-            double targetPeriapsisAnomaly = selectedVessel.orbit.TranslateAnomaly(part.vessel.orbit, 0);
-
-            double[] targetApses = new double[8];
-            double[] shipApses = new double[8];
-            for (int i = 0; i < 4; i++)
-            {
-                targetApses[i * 2 + 0] = selectedVessel.orbit.GetTimeToTrue(0) + i * selectedVessel.orbit.period;
-                targetApses[i * 2 + 1] = selectedVessel.orbit.GetTimeToTrue(0) + i * selectedVessel.orbit.period;
-                shipApses[i * 2 + 0] = part.vessel.orbit.GetTimeToTrue(targetApoapsisAnomaly) + i * part.vessel.orbit.period;
-                shipApses[i * 2 + 1] = part.vessel.orbit.GetTimeToTrue(targetPeriapsisAnomaly) + i * part.vessel.orbit.period;
-            }
-
-            // Walk the lists and find the nearest times. This could be optimized
-            // but it doesn't matter.
-
-            double closestPeriDeltaT = double.MaxValue;
-            int closestPeriIndex = -1;
-
-            double closestApoDeltaT = double.MaxValue;
-            int closestApoIndex = -1;
-
-            for (int i = 0; i < 4; i++)
-            {
-                double shipApoT = shipApses[i * 2 + 0];
-                double shipPeriT = shipApses[i * 2 + 1];
-
-                for (int j = 0; j < 4; j++)
-                {
-                    double targApoT = targetApses[j * 2 + 0];
-                    double deltaApo = Math.Abs(shipApoT - targApoT);
-                    if (deltaApo < closestApoDeltaT)
-                    {
-                        closestApoDeltaT = deltaApo;
-                        closestApoIndex = j * 2 + 0;
-                    }
-
-                    double targPeriT = targetApses[j * 2 + 1];
-                    double deltaPeri = Math.Abs(shipPeriT - targPeriT);
-                    if (deltaPeri < closestPeriDeltaT)
-                    {
-                        closestPeriDeltaT = deltaPeri;
-                        closestPeriIndex = j * 2 + 1;
-                    }
-                }
-            }
-
-            if (closestApoDeltaT < closestPeriDeltaT)
-            {
-                timeToRendezvous = shipApses[closestApoIndex];
-                minDeltaTime = closestApoDeltaT;
-            }
-            else
-            {
-                timeToRendezvous = shipApses[closestPeriIndex];
-                minDeltaTime = closestPeriDeltaT;
-            }
-        }
-
-        private double CalculateTimeTillNextTargetApsis()
-        {
-            Vessel selectedVessel = FlightGlobals.Vessels[_selectedVesselIndex] as Vessel;
-
-            double targetApoapsisAnomaly = selectedVessel.orbit.TranslateAnomaly(part.vessel.orbit, 180);
-            double targetPeriapsisAnomaly = selectedVessel.orbit.TranslateAnomaly(part.vessel.orbit, 0);
-
-            double shipTimeToTargetApoapsis = part.vessel.orbit.GetTimeToTrue(targetApoapsisAnomaly);
-            double shipTimeToTargetPeriapsis = part.vessel.orbit.GetTimeToTrue(targetPeriapsisAnomaly);
-
-            return Math.Min(shipTimeToTargetApoapsis, shipTimeToTargetPeriapsis);
-        }
-
-        private double CalculateTimeTillFurtherTargetApsis()
-        {
-            Vessel selectedVessel = FlightGlobals.Vessels[_selectedVesselIndex] as Vessel;
-
-            double targetApoapsisAnomaly = selectedVessel.orbit.TranslateAnomaly(part.vessel.orbit, 180);
-            double targetPeriapsisAnomaly = selectedVessel.orbit.TranslateAnomaly(part.vessel.orbit, 0);
-
-            double shipTimeToTargetApoapsis = part.vessel.orbit.GetTimeToTrue(targetApoapsisAnomaly);
-            double shipTimeToTargetPeriapsis = part.vessel.orbit.GetTimeToTrue(targetPeriapsisAnomaly);
-
-            return Math.Max(shipTimeToTargetApoapsis, shipTimeToTargetPeriapsis);
-        }
-
-        private void DriveShip(FlightCtrlState controls)
-        {
-            if (!CheckVessel())
-                return;
-
-            Vessel selectedVessel = FlightGlobals.Vessels[_selectedVesselIndex] as Vessel;
-
-            if (_autoAlign)
-            {
-                // Is it time to burn? Find soonest node.
-                double timeToBurnAN = part.vessel.orbit.GetTimeToRelAN(selectedVessel.orbit);
-                double timeToBurnDN = part.vessel.orbit.GetTimeToRelDN(selectedVessel.orbit);
-
-                bool ascendingSoonest = timeToBurnAN < timeToBurnDN;
-                double timeToBurnNode = ascendingSoonest ? timeToBurnAN : timeToBurnDN;
+            //            if (comeAlongside) driveComeAlongside(controls);
 
 
-                if (timeToBurnNode > 30)
-                {
-                    core.warpTo(this, timeToBurnNode - 30, warpLookaheadTimes);
-                }
 
-                // Figure out which way we want to burn to adjust our inclination.
-                _flyByWire = true;
-                if (!_autoAlignBurnTriggered)
-                {
-                    if (_relativeInclination < 0.0)
-                        PointAt = ascendingSoonest ? Orient.Normal : Orient.AntiNormal;
-                    else
-                        PointAt = ascendingSoonest ? Orient.AntiNormal : Orient.Normal;
-                }
+            if (autoAlign) driveAutoAlign(controls);
 
-                // Do a burn just ahead of the ascending node - in the 5 seconds preceding.
-                if ((timeToBurnNode < 10.0 || _autoAlignBurnTriggered) && _headingError.magnitude < 5.0 && Math.Abs(_relativeInclination) > 0.01)
-                {
-                    _autoAlignBurnTriggered = true;
-                    if (Math.Abs(_relativeInclination) > 0.1)
-                    {
-                        controls.mainThrottle = 1.0f;
-                    }
-                    else
-                    {
-                        controls.mainThrottle = 0.25f;
-                    }
-                }
-                else
-                {
-                    controls.mainThrottle = 0.0f;
-                }
-
-                if (Math.Abs(_relativeInclination) < 0.02)
-                {
-                    _autoAlignBurnTriggered = false;
-                    _autoAlign = false;
-                }
-            }
-
+            /*
             if (_autoPhaser)
             {
                 switch (_autoPhaserState)
@@ -1080,54 +446,154 @@ namespace MuMech
             controls.pitch = Mathf.Clamp(controls.pitch + _act.x, -1.0F, 1.0F);
             controls.yaw = Mathf.Clamp(controls.yaw - _act.y, -1.0F, 1.0F);
             controls.roll = Mathf.Clamp(controls.roll + _act.z, -1.0F, 1.0F);
+           */
+
         }
+
+        /*        void driveComeAlongside(FlightCtrlState controls) {
+            
+                        if (core.targetOrbit() == null)
+                        {
+                            comeAlongside = false;
+                            FlightInputHandler.SetNeutralControls();
+                            core.controlRelease(this);
+                            return;
+                        }
+
+                        Vector3d targetPosition = core.targetPosition();// (core.targetType == MechJebCore.TargetType.VESSEL ? (Vector3d)core.targetVessel.transform.position : core.targetBody.position);
+                        Vector3d vectorToTarget = (targetPosition - vesselState.CoM).normalized;
+                        Vector3d relativeVelocity = vesselState.velocityVesselOrbit - core.targetOrbit().GetVel();
+                        Vector3d lateralVector = Vector3d.Exclude(vectorToTarget, relativeVelocity).normalized;
+                        double lateralSpeed = Vector3d.Dot(relativeVelocity, lateralVector);
+                        double closingSpeed = Vector3d.Dot(relativeVelocity, vectorToTarget);
+                        double closingDistance = Vector3d.Dot(targetPosition - vesselState.CoM, relativeVelocity.normalized);
+                        double lateralSpeedFraction = lateralSpeed / relativeVelocity.magnitude;
+
+                        //print("lateralSpeedFraction = " + lateralSpeedFraction);
+
+                        double maxClosingSpeed = Math.Sqrt(2 * Math.Max(closingDistance - 20, 0) * vesselState.maxThrustAccel);
+                        double desiredClosingSpeed = 0.5 * maxClosingSpeed;
+
+                        //print(String.Format("closingSpeed / desiredClosingSpeed = {0:F1} / {1:F1}", closingSpeed, desiredClosingSpeed)); 
+
+                        double lateralWeight = lateralSpeed;
+                        if (lateralSpeed < 1.0) lateralWeight *= lateralSpeed; //an attempt to suppress wiggles
+                        double closingWeight = ARUtils.Clamp(1.1*closingSpeed - desiredClosingSpeed, 0, maxClosingSpeed);
+
+                        //print(String.Format("lateralWeight / closingWeight = {0:F1} / {1:F1}", lateralWeight, closingWeight));
+
+                        Vector3d desiredAttitude = (-lateralWeight * lateralVector - closingWeight * relativeVelocity.normalized).normalized;
+
+                        core.attitudeTo(desiredAttitude, MechJebCore.AttitudeReference.INERTIAL, this);
+
+                        if (Vector3d.Dot(relativeVelocity, vectorToTarget) < 0 || relativeVelocity.magnitude < 0.1)
+                        {
+                            comeAlongside = false;
+                            FlightInputHandler.SetNeutralControls();
+                            core.controlRelease(this);
+                        }
+                        else
+                        {
+                            if (closingDistance < 25)
+                            {
+                                //print("last few meters: closingDistance = " + closingDistance);
+                                core.attitudeTo(Vector3d.back, MechJebCore.AttitudeReference.TARGET, this);
+                                if (core.attitudeAngleFromTarget() < 5)
+                                {
+                                    controls.mainThrottle = Mathf.Clamp((float)(relativeVelocity.magnitude / vesselState.maxThrustAccel), 0.0F, 1.0F);
+                                }
+                            }
+                            else if (core.attitudeAngleFromTarget() < 15 &&
+                                (closingSpeed > desiredClosingSpeed || lateralSpeedFraction > 0.08))
+                            {
+                                float lateralThrottle = Mathf.Clamp((float)(20 * (lateralSpeedFraction - 0.08)), 0.0F, 1.0F);
+                                float closingThrottle = Mathf.Clamp((float)(10 * (closingSpeed / desiredClosingSpeed - 1)), 0.0F, 1.0F);
+                                controls.mainThrottle = Mathf.Max(lateralThrottle, closingThrottle);
+                            }
+                            else
+                            {
+                                controls.mainThrottle = 0.0F;
+                            }
+                        }
+                }*/
+
+
+        void driveAutoAlign(FlightCtrlState controls)
+        {
+            if (!autoAlignBurnTriggered)
+            {
+                // Is it time to burn? Find soonest node.
+                double timeToBurnAN = part.vessel.orbit.GetTimeToRelAN(core.targetOrbit());
+                double timeToBurnDN = part.vessel.orbit.GetTimeToRelDN(core.targetOrbit());
+
+                bool ascendingSoonest = timeToBurnAN < timeToBurnDN;
+                double timeToBurnNode = ascendingSoonest ? timeToBurnAN : timeToBurnDN;
+
+                autoAlignBurnDirection = ascendingSoonest ? Vector3.right : Vector3.left;
+
+                double burnDV = part.vessel.orbit.relativeInclination(core.targetOrbit()) * Math.PI / 180 * vesselState.speedOrbital;
+                double burnTime = burnDV / vesselState.maxThrustAccel;
+                double leadTime = Math.Max(burnTime / 2, 1.0); //min lead time of 1 second so we don't miss the burn if the burn time is short
+
+                statusString = "Align Orbits: Burning in " + (int)(timeToBurnNode - leadTime) + " s";
+
+                if (timeToBurnNode > leadTime + 30)
+                {
+                    core.warpTo(this, timeToBurnNode - burnTime / 2 - 30, warpLookaheadTimes);
+                }
+                else if (timeToBurnNode < leadTime)
+                {
+                    autoAlignBurnTriggered = true;
+                    autoAlignDidBurn = false;
+                }
+            }
+
+            core.attitudeTo(autoAlignBurnDirection, MechJebCore.AttitudeReference.ORBIT, this);
+
+            if (autoAlignBurnTriggered)
+            {
+                statusString = "Align Orbits: Burning to match planes";
+                if (core.attitudeAngleFromTarget() < 5.0)
+                {
+                    double maxDegreesPerSecond = (180 / Math.PI) * vesselState.maxThrustAccel / vesselState.speedOrbital;
+                    if (Math.Abs(part.vessel.orbit.relativeInclination(core.targetOrbit())) > maxDegreesPerSecond / 2)
+                    {
+                        controls.mainThrottle = 1.0f;
+                    }
+                    else
+                    {
+                        controls.mainThrottle = (float)Math.Max(part.vessel.orbit.relativeInclination(core.targetOrbit()) / maxDegreesPerSecond, 0.05F);
+                    }
+                    autoAlignDidBurn = true;
+                }
+                else
+                {
+                    controls.mainThrottle = 0.0f;
+                }
+
+                //stop burn if it's no longer pushing the orbit normals closer:
+                Vector3d torqueNeeded = ARUtils.swapYZ(part.vessel.orbit.GetOrbitNormal()).normalized - ARUtils.swapYZ(core.targetOrbit().GetOrbitNormal()).normalized;
+                Vector3d torqueDir = Vector3d.Cross(vesselState.CoM - part.vessel.mainBody.transform.position, vesselState.forward).normalized;
+                double torqueDotProduct = Vector3d.Dot(torqueDir, torqueNeeded);
+
+                if (autoAlignDidBurn && (part.vessel.orbit.relativeInclination(core.targetOrbit()) < 0.005 || torqueDotProduct < 0))
+                {
+                    statusString = "Align Orbits: Finished";
+                    autoAlignBurnTriggered = false;
+                    autoAlign = false;
+                    FlightInputHandler.SetNeutralControls();
+                    controls.mainThrottle = 0;
+                    core.controlRelease(this);
+                }
+            }
+        }
+
 
         #endregion
 
         #region KSP Interface
 
-        public override void onDisconnect()
-        {
-            _flyByWire = false;
-        }
-
-        public override void onPartFixedUpdate()
-        {
-            _rendezvousRecalculationTimer += TimeWarp.deltaTime;
-
-            if (((core.targetType == MechJebCore.TargetType.NONE) || (FlightGlobals.activeTarget != part.vessel)) && waypointHijacked)
-            {
-                navball.target = defaultPurpleWaypoint;
-                waypointHijacked = false;
-            }
-
-            if (core.targetType != MechJebCore.TargetType.NONE)
-            {
-                if (!waypointHijacked)
-                {
-                    if (navball == null)
-                    {
-                        navball = (NavBall)GameObject.FindObjectOfType(typeof(NavBall));
-                    }
-                    defaultPurpleWaypoint = navball.target;
-
-                    waypointHijacked = true;
-                }
-                navball.target = (core.targetType == MechJebCore.TargetType.VESSEL) ? core.targetVessel.transform : core.targetBody.transform;
-            }
-
-            if (Mode == UIMode.SYNC)
-                PerformSyncPartLogic();
-
-            UpdateVectors();
-
-            if (_modeChanged)
-            {
-                windowPos = new Rect(windowPos.x, windowPos.y, 10, 10);
-                _modeChanged = false;
-            }
-        }
-
+        /*
         private void PerformSyncPartLogic()
         {
             // What anomaly are we trying to rendezvous at?
@@ -1175,16 +641,8 @@ namespace MuMech
 
             // Reset the timer.
             _rendezvousRecalculationTimer = 0;
-        }
+        }*/
 
-        public override void onPartStart()
-        {
-            FlightInputHandler.OnFlyByWire += DriveShip;
-            if ((WindowPos.x == 0) && (WindowPos.y == 0))
-            {
-                WindowPos = new Rect(Screen.width - 220, 10, 10, 10);
-            }
-        }
 
         #endregion
     }

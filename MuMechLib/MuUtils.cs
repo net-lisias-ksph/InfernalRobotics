@@ -7,6 +7,24 @@ namespace MuMech
 {
     public class MuUtils
     {
+        private static GUISkin _defaultSkin;
+        public static GUISkin DefaultSkin
+        {
+            get
+            {
+                if (_defaultSkin == null)
+                {
+                    _defaultSkin = AssetBase.GetGUISkin("KSP window 2");
+                }
+                return _defaultSkin;
+            }
+        }
+
+        public static void SelectDefaultSkin(string skin)
+        {
+            _defaultSkin = AssetBase.GetGUISkin(skin);
+        }
+
         public static string ToSI(double d, int digits = 3, int MinMagnitude = 0, int MaxMagnitude = int.MaxValue)
         {
             float exponent = (float)Math.Log10(Math.Abs(d));

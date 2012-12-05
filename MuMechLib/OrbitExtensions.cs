@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using MuMech;
 //*TODO, FindAN() seems to reverse the AN and DN either some, or all of the time.
 namespace OrbitExtensions
 {
@@ -86,9 +87,29 @@ namespace OrbitExtensions
         /// <param name='tgtorbit'>
         /// Target Orbit
         /// </param>
-        public static double FindAN(Orbit orbit, Orbit tgtorbit)
+        public static double FindAN(this Orbit orbit, Orbit tgtorbit)
         {
-            double rad = Math.PI/180;
+            Vector3d normal = ARUtils.swapYZ(orbit.GetOrbitNormal());
+            Vector3d targetNormal = ARUtils.swapYZ(tgtorbit.GetOrbitNormal());
+            Vector3d vectorToAN = Vector3d.Cross(normal, targetNormal);
+            Vector3d vectorToPe = ARUtils.swapYZ(orbit.eccVec);
+            double angleFromPe = Vector3d.Angle(vectorToPe, vectorToAN);
+
+            //If the AN is actually during the infalling part of the orbit then we need to add 180 to
+            //angle from Pe to get the true anomaly. Test this by taking the the cross product of the
+            //orbit normal and vector to the periapsis. This gives a vector that points to center of the 
+            //outgoing side of the orbit. If vectorToAN is more than 90 degrees from this vector, it occurs
+            //during the infalling part of the orbit.
+            if (Math.Abs(Vector3d.Angle(vectorToAN, Vector3d.Cross(vectorToPe, normal))) < 90)
+            {
+                return angleFromPe;
+            }
+            else
+            {
+                return 360 - angleFromPe;
+            }
+
+/*            double rad = Math.PI/180;
             double Lan1 = orbit.LAN;
             double inc1 = orbit.inclination;
             double Lan2 = tgtorbit.LAN;
@@ -112,7 +133,7 @@ namespace OrbitExtensions
             double λ = Math.Atan(Math.Tan(α*rad)/Math.Cos(inc1*rad))/rad;
             double x = 180 + (λ - orbit.argumentOfPeriapsis);
             if (x > 360) return 360 - x;
-            else return x;
+            else return x;*/
         }
 
         /// <summary>
@@ -428,10 +449,7 @@ namespace OrbitExtensions
 
         public static double relativeInclination(this Orbit a, Orbit b)
         {
-            Vector3d normalA = Vector3d.Cross(a.pos, a.vel);
-            Vector3d normalB = Vector3d.Cross(b.pos, b.vel);
-
-            return Math.Abs(Vector3d.Angle(normalA, normalB));
+            return Math.Abs(Vector3d.Angle(a.GetOrbitNormal(), b.GetOrbitNormal()));
         }
     }
 }

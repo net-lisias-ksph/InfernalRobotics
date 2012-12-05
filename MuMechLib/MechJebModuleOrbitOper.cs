@@ -486,6 +486,22 @@ namespace MuMech
                             }
                         }
 
+                        if (FlightGlobals.fetch.VesselTarget is CelestialBody)
+                        {
+                            CelestialBody target = (CelestialBody)FlightGlobals.fetch.VesselTarget;
+                            if (target.referenceBody == part.vessel.mainBody)
+                            {
+                                if (GUILayout.Button("Burn for " + target.name + " intercept"))
+                                {
+                                    core.controlClaim(this);
+                                    currentOperation = Operation.TRANSFER_INJECTION;
+                                    transState = TRANSState.LOWERING_PERIAPSIS;
+                                    transferTarget = target;
+                                }
+                            }
+                        }
+
+
                         if (part.vessel.orbit.eccentricity > 1.0)
                         {
                             GUILayout.Label("Transfer injection failed. Did you start from a circular equatorial orbit?", ARUtils.labelStyle(Color.yellow));
@@ -561,7 +577,7 @@ namespace MuMech
             GUIStyle abortStyle = (currentOperation == Operation.NONE ? ARUtils.buttonStyle(Color.gray) : ARUtils.buttonStyle(Color.red));
             if (GUILayout.Button("Abort", abortStyle))
             {
-                endOperation();
+                endOperation(null);
             }
 
             showHelpWindow = GUILayout.Toggle(showHelpWindow, "?", new GUIStyle(GUI.skin.button));
@@ -676,7 +692,7 @@ namespace MuMech
 
             if (endBurn)
             {
-                endOperation();
+                endOperation(s);
             }
             else
             {
@@ -708,7 +724,8 @@ namespace MuMech
 
             if (endBurn)
             {
-                endOperation();
+                s.mainThrottle = 0;
+                endOperation(s);
             }
             else
             {
@@ -729,7 +746,7 @@ namespace MuMech
             double dVLeft = circVelocityCorrection.magnitude;
             if (dVLeft < 0.1)
             {
-                endOperation();
+                endOperation(s);
             }
             else
             {
@@ -750,7 +767,7 @@ namespace MuMech
             double dVLeft = ellVelocityCorrection.magnitude;
             if (dVLeft < 0.1)
             {
-                endOperation();
+                endOperation(s);
             }
             else
             {
@@ -788,7 +805,7 @@ namespace MuMech
         {
             if (transferTarget == null || part.vessel.orbit.eccentricity > 1.0)
             {
-                endOperation();
+                endOperation(s);
                 return;
             }
 
@@ -831,7 +848,7 @@ namespace MuMech
         {
             if (part.vessel.orbit.eccentricity > 1)
             {
-                endOperation();
+                endOperation(s);
                 return;
             }
 
@@ -869,12 +886,13 @@ namespace MuMech
             s.mainThrottle = 0.0F;
         }
 
+        float maxThrottle = 0.0f;
         void driveTransferLoweringPeriapsis(FlightCtrlState s)
         {
             double postTransferPeR = getPredictedPostTransferPeR();
             if (postTransferPeR != -1 && postTransferPeR < desiredPostTransferPeA + transferTarget.Radius)
             {
-                endOperation();
+                endOperation(s);
                 return;
             }
 
@@ -934,12 +952,14 @@ namespace MuMech
                 if (postTransferPeR == -1) dVLeft = intersectionSeparation.magnitude / gradientMagnitude;
                 else dVLeft = (postTransferPeR - (desiredPostTransferPeA + transferTarget.Radius)) / gradientMagnitude;
 
-                float throttle = Mathf.Clamp((float)(dVLeft / (2.0 * vesselState.maxThrustAccel)), 0.02F, 1.0F);
+                float throttle = Mathf.Min(Mathf.Clamp((float)(dVLeft / (2.0 * vesselState.maxThrustAccel)), 0.02F, 1.0F), maxThrottle);
                 s.mainThrottle = throttle;
+                maxThrottle += 0.001F;
             }
             else
             {
                 s.mainThrottle = 0.0F;
+                maxThrottle = 0.0F;
             }
         }
 
@@ -961,7 +981,7 @@ namespace MuMech
             {
                 if (part.vessel.orbit.eccentricity > 1.0)
                 {
-                    endOperation();
+                    endOperation(s);
                     return;
                 }
 
@@ -985,14 +1005,15 @@ namespace MuMech
                 }
             }
             
-            if (timeToTarget < 1.0 || timeSinceTarget < 10.0) endOperation();
+            if (timeToTarget < 1.0 || timeSinceTarget < 10.0) endOperation(s);
             else core.warpTo(this, timeToTarget, warpLookaheadTimes);
 
 
         }
 
-        void endOperation()
+        void endOperation(FlightCtrlState s)
         {
+            if (s != null) s.mainThrottle = 0;
             if (currentOperation == Operation.WARP && TimeWarp.CurrentRateIndex > 0) core.warpMinimum(this, false);
             currentOperation = Operation.NONE;
             FlightInputHandler.SetNeutralControls();
@@ -1007,7 +1028,7 @@ namespace MuMech
         
         public void handleReferenceBodyChange(CelestialBody newBody)
         {
-            endOperation();
+            endOperation(null);
         }
 
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using MuMech;
 
 namespace MuMech
 {
@@ -385,7 +386,7 @@ public class MuMechServo : MuMechToggle
                 winPos = new Rect(Screen.width / 2, Screen.height / 2, 10, 10);
             }
 
-            GUI.skin = HighLogic.Skin;
+            GUI.skin = MuUtils.DefaultSkin;
 
             winPos = GUILayout.Window(956, winPos, WindowGUI, "Servo Control", GUILayout.MinWidth(150));
         }
@@ -403,7 +404,7 @@ public class MuMechServo : MuMechToggle
             resetWin = false;
         }
 
-        GUI.skin = HighLogic.Skin;
+        GUI.skin = MuUtils.DefaultSkin;
 
         editorWinPos = GUILayout.Window(957, editorWinPos, editorWindowGUI, "Servo Configuration", GUILayout.Width(250), GUILayout.Height(Screen.height / 2));
     }

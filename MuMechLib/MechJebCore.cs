@@ -32,14 +32,7 @@ namespace MuMech
             RELATIVE_VELOCITY, //forward = toward relative velocity direction, up = tbd
             TARGET_ORIENTATION //forwad = direction target is facing, up = target up
         }
-
-        public enum TargetType
-        {
-            NONE,
-            VESSEL,
-            BODY
-        }
-
+        
         public enum TMode
         {
             OFF,
@@ -226,79 +219,6 @@ namespace MuMech
             }
         }
 
-        public bool targetChanged = false;
-        protected TargetType _targetType = TargetType.NONE;
-        public TargetType targetType
-        {
-            get
-            {
-                return _targetType;
-            }
-            set
-            {
-                if (_targetType != value)
-                {
-                    _targetType = value;
-                    targetChanged = true;
-                    if (attitudeReference == AttitudeReference.TARGET)
-                    {
-                        if (value == TargetType.NONE)
-                        {
-                            attitudeDeactivate(null);
-                        }
-                        attitudeChanged = true;
-                    }
-                }
-            }
-        }
-
-        protected Vessel _targetVessel = null;
-        public Vessel targetVessel
-        {
-            get
-            {
-                return _targetVessel;
-            }
-            set
-            {
-                if (_targetVessel != value)
-                {
-                    _targetVessel = value;
-                    if (targetType == TargetType.VESSEL)
-                    {
-                        targetChanged = true;
-                        if (attitudeReference == AttitudeReference.TARGET)
-                        {
-                            attitudeChanged = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        protected CelestialBody _targetBody = null;
-        public CelestialBody targetBody
-        {
-            get
-            {
-                return _targetBody;
-            }
-            set
-            {
-                if (_targetBody != value)
-                {
-                    _targetBody = value;
-                    if (targetType == TargetType.BODY)
-                    {
-                        targetChanged = true;
-                        if (attitudeReference == AttitudeReference.TARGET)
-                        {
-                            attitudeChanged = true;
-                        }
-                    }
-                }
-            }
-        }
 
         public double attitudeError;
 
@@ -400,6 +320,7 @@ namespace MuMech
                 return;
             }
             drive(s);
+            FlightInputHandler.state.mainThrottle = s.mainThrottle; //so that the on-screen throttle gauge reflects the autopilot throttle
         }
 
         public bool controlClaim(ComputerModule newController, bool force = false)
@@ -438,6 +359,13 @@ namespace MuMech
         {
             Vector3 fwd, up;
             Quaternion rotRef = Quaternion.identity;
+            if (FlightGlobals.fetch.VesselTarget == null &&
+                (reference == AttitudeReference.TARGET || reference == AttitudeReference.TARGET_ORIENTATION || reference == AttitudeReference.RELATIVE_VELOCITY))
+            {
+                //in target-relative mode, but there's no target:
+                attitudeDeactivate(null);
+                return rotRef;
+            }
             switch (reference)
             {
                 case AttitudeReference.ORBIT:
@@ -453,26 +381,26 @@ namespace MuMech
                     rotRef = Quaternion.LookRotation(vesselState.velocityVesselSurfaceUnit, vesselState.up);
                     break;
                 case AttitudeReference.TARGET:
-                    fwd = (((targetType == TargetType.VESSEL) ? (Vector3d)targetVessel.transform.position : targetBody.position) - vesselState.CoM).normalized;
+                    fwd = (targetPosition() - part.vessel.transform.position).normalized;
                     up = Vector3d.Cross(fwd, vesselState.leftOrbit);
                     Vector3.OrthoNormalize(ref fwd, ref up);
                     rotRef = Quaternion.LookRotation(fwd, up);
                     break;
                 case AttitudeReference.RELATIVE_VELOCITY:
-                    fwd = (vesselState.velocityVesselOrbit - ((targetType == TargetType.VESSEL) ? targetVessel.orbit.GetVel() : targetBody.orbit.GetVel())).normalized;
+                    fwd = relativeVelocityToTarget().normalized;
                     up = Vector3d.Cross(fwd, vesselState.leftOrbit);
                     Vector3.OrthoNormalize(ref fwd, ref up);
                     rotRef = Quaternion.LookRotation(fwd, up);
                     break;
                 case AttitudeReference.TARGET_ORIENTATION:
-                    switch (targetType)
+                    Transform targetTransform = FlightGlobals.fetch.VesselTarget.GetTransform();
+                    if (FlightGlobals.fetch.VesselTarget is ModuleDockingNode)
                     {
-                        case TargetType.VESSEL:
-                            rotRef = Quaternion.LookRotation(targetVessel.transform.up, targetVessel.transform.right);
-                            break;
-                        case TargetType.BODY:
-                            rotRef = vesselState.rotationSurface;
-                            break;
+                        rotRef = Quaternion.LookRotation(targetTransform.forward, targetTransform.up);
+                    }
+                    else
+                    {
+                        rotRef = Quaternion.LookRotation(targetTransform.up, targetTransform.right);
                     }
                     break;
             }
@@ -556,35 +484,23 @@ namespace MuMech
         }
         public float distanceFromTarget()
         {
-            return Vector3.Distance(((targetType == TargetType.VESSEL) ? (Vector3d)targetVessel.transform.position : targetBody.position), part.vessel.transform.position);
+            return Vector3.Distance(targetPosition(), part.vessel.transform.position);
         }
         public Orbit targetOrbit()
         {
-            return targetType == TargetType.VESSEL ? targetVessel.orbit : targetBody.orbit;
+            return FlightGlobals.fetch.VesselTarget.GetOrbit();
         }
         public Vector3d relativeVelocityToTarget()
         {
-            return (vesselState.velocityVesselOrbit - ((targetType == TargetType.VESSEL) ? targetVessel.orbit.GetVel() : targetBody.orbit.GetVel()));
+            return (vesselState.velocityVesselOrbit - targetOrbit().GetVel());
         }
         public string targetName()
         {
-            return targetType == TargetType.VESSEL ? targetVessel.vesselName : targetBody.name;
+            return FlightGlobals.fetch.VesselTarget.GetName();
         }
-
-        public void setTarget(Vessel target)
+        public Vector3d targetPosition()
         {
-            targetVessel = target;
-            targetType = TargetType.VESSEL;
-        }
-        public void setTarget()
-        {
-            targetType = TargetType.NONE;
-        }
-
-        public void setTarget(CelestialBody target)
-        {
-            targetBody = target;
-            targetType = TargetType.BODY;
+            return FlightGlobals.fetch.VesselTarget.GetTransform().position;
         }
 
         public bool landActivate(ComputerModule controller, double touchdownSpeed = 0.5)
@@ -673,7 +589,6 @@ namespace MuMech
                 return true;
             }
 
-
             //conditions to increase warp:
             //-we are not already at max warp
             //-the most recent non-instant warp change has completed
@@ -688,7 +603,7 @@ namespace MuMech
                     || TimeWarp.WarpMode == TimeWarp.Modes.LOW
                     || timeWarp.warpRates[TimeWarp.CurrentRateIndex + 1] <= TimeWarp.MaxPhysicsRate
                     || part.vessel.Landed)
-                && (instantAltitudeASL > timeWarp.altitudeLimits[TimeWarp.CurrentRateIndex + 1] * part.vessel.mainBody.Radius
+                && (instantAltitudeASL > timeWarp.GetAltitudeLimit(TimeWarp.CurrentRateIndex + 1, part.vessel.mainBody)
                     || part.vessel.Landed)
                 && vesselState.time - warpIncreaseAttemptTime > 2)
             {
@@ -864,17 +779,65 @@ namespace MuMech
                     }
                     else
                     {
-                        tmode = TMode.KEEP_VERTICAL;
-                        trans_kill_h = true;
-                        double minalt = Math.Min(vesselState.altitudeASL, vesselState.altitudeTrue);
-                        if (vesselState.maxThrustAccel < vesselState.gravityForce.magnitude)
+                        double minalt = Math.Min(vesselState.altitudeBottom, Math.Min(vesselState.altitudeASL, vesselState.altitudeTrue));
+
+                        if (Vector3d.Dot(vesselState.velocityVesselSurface, vesselState.up) > 0)
                         {
+                            //if we have positive vertical velocity, point up and don't thrust:
+                            attitudeTo(Vector3d.up, AttitudeReference.SURFACE_NORTH, null);
+                            tmode = TMode.DIRECT;
                             trans_spd_act = 0;
                         }
-                        else
+                        else if (Vector3d.Angle(vesselState.forward, -vesselState.velocityVesselSurface) > 90)
                         {
-                            trans_spd_act = (float)-Math.Sqrt((vesselState.maxThrustAccel - vesselState.gravityForce.magnitude) * 2 * minalt) * 0.50F;
+                            //if we're not facing approximately retrograde, turn to point retrograde and don't thrust:
+                            attitudeTo(Vector3d.back, AttitudeReference.SURFACE_VELOCITY, null);
+                            tmode = TMode.DIRECT;
+                            trans_spd_act = 0;
                         }
+                        else if (vesselState.maxThrustAccel < vesselState.gravityForce.magnitude)
+                        {                            
+                            //if we have TWR < 1, just try as hard as we can to decelerate:
+                            //(we need this special case because otherwise the calculations spit out NaN's)
+                            tmode = TMode.KEEP_VERTICAL;
+                            trans_kill_h = true;
+                            trans_spd_act = 0;
+                        }
+                        else if (minalt > 200)
+                        {
+                            //if we're above 200m, point retrograde and control surface velocity:
+                            attitudeTo(Vector3d.back, AttitudeReference.SURFACE_VELOCITY, null);
+
+                            tmode = TMode.KEEP_SURFACE;
+                            trans_spd_act = (float)Math.Sqrt((vesselState.maxThrustAccel - vesselState.gravityForce.magnitude) * 2 * minalt) * 0.90F;
+                        }
+                        else 
+                        {
+                            //last 200 meters:
+                            trans_spd_act = -Mathf.Lerp(0, (float)Math.Sqrt((vesselState.maxThrustAccel - vesselState.gravityForce.magnitude) * 2 * 200) * 0.90F, (float)minalt / 200);
+
+                            //take into account desired landing speed:
+                            trans_spd_act = (float)Math.Min(-trans_land_touchdown_speed, trans_spd_act);
+
+                            if (Math.Abs(Vector3d.Angle(-vesselState.velocityVesselSurface, vesselState.up)) < 10)
+                            {
+                                //if we're falling more or less straight down, control vertical speed and 
+                                //kill horizontal velocity
+                                tmode = TMode.KEEP_VERTICAL;
+                                trans_kill_h = true;
+                            }
+                            else
+                            {
+                                //if we're falling at a significant angle from vertical, our vertical speed might be
+                                //quite small but we might still need to decelerate. Control the total speed instead
+                                //by thrusting directly retrograde
+                                attitudeTo(Vector3d.back, AttitudeReference.SURFACE_VELOCITY, null);
+                                tmode = TMode.KEEP_SURFACE;
+                                trans_spd_act *= -1;
+                            }
+                        }
+
+                        //deploy landing gears:
                         if (!trans_land_gears && (minalt < 1000))
                         {
                             part.vessel.rootPart.SendEvent("LowerLeg");
@@ -891,20 +854,6 @@ namespace MuMech
                                 }
                             }
                             trans_land_gears = true;
-                        }
-                        if (minalt < 200)
-                        {
-                            minalt = Math.Min(vesselState.altitudeBottom, minalt);
-                            trans_spd_act = -Mathf.Lerp(0, (float)Math.Sqrt((vesselState.maxThrustAccel - vesselState.gravityForce.magnitude) * 2 * 200) * 0.50F, (float)minalt / 200);
-                            trans_spd_act = (float)Math.Min(-trans_land_touchdown_speed, trans_spd_act);
-                            //                            if (minalt < 3.0 * trans_land_touchdown_speed) trans_spd_act = -(float)trans_land_touchdown_speed;
-                            /*
-                            if ((minalt >= 90) && (vesselState.speedHorizontal > 1)) {
-                                trans_spd_act = -Mathf.Lerp(0, (float)Math.Sqrt((vesselState.maxThrustAccel - vesselState.gravityForce.magnitude) * 2 * 200) * 0.90F, (float)(minalt - 100) / 300);
-                            } else {
-                                trans_spd_act = -Mathf.Lerp(0, (float)Math.Sqrt((vesselState.maxThrustAccel - vesselState.gravityForce.magnitude) * 2 * 200) * 0.90F, (float)minalt / 300);
-                            }
-                            */
                         }
                     }
                 }
@@ -947,6 +896,12 @@ namespace MuMech
                 }
 
                 double t_err = (trans_spd_act - spd) / vesselState.maxThrustAccel;
+                if ((tmode == TMode.KEEP_ORBITAL && Vector3d.Dot(vesselState.forward, vesselState.velocityVesselOrbit) < 0) ||
+                   (tmode == TMode.KEEP_SURFACE && Vector3d.Dot(vesselState.forward, vesselState.velocityVesselSurface) < 0))
+                {
+                    //allow thrust to declerate 
+                    t_err *= -1;
+                }
                 t_integral += t_err * TimeWarp.fixedDeltaTime;
                 double t_deriv = (t_err - t_prev_err) / TimeWarp.fixedDeltaTime;
                 double t_act = (t_Kp * t_err) + (t_Ki * t_integral) + (t_Kd * t_deriv);
@@ -1265,7 +1220,9 @@ namespace MuMech
 
             if ((part.State != PartStates.DEAD) && (part.vessel == FlightGlobals.ActiveVessel) && allJebs.ContainsKey(part.vessel) && (allJebs[part.vessel].controller == this) && !gamePaused)
             {
-                GUI.skin = HighLogic.Skin;
+                GUI.skin = MuUtils.DefaultSkin;
+
+                GUI.skin.label.normal.textColor = Color.white;
 
                 switch (main_windowStat)
                 {
@@ -1330,6 +1287,7 @@ namespace MuMech
                     GUI.FocusControl("MechJebOpen");
                     firstDraw = false;
                 }
+
             }
         }
 
@@ -1367,7 +1325,7 @@ namespace MuMech
                 module.onPartStart();
             }
 
-            part.Events.Add(new BaseEvent("MechJebLua", MechJebLua));
+            part.Events.Add(new BaseEvent(part.Events, "MechJebLua", MechJebLua));
 
             loadSettings();
         }
@@ -1377,14 +1335,14 @@ namespace MuMech
             RenderingManager.AddToPostDrawQueue(0, new Callback(drawGUI));
             firstDraw = true;
 
-            FlightInputHandler.OnFlyByWire += new FlightInputHandler.FlightInputCallback(onFlyByWire);
+            part.vessel.OnFlyByWire += onFlyByWire;
             flyByWire = true;
 
             attitudeTo(Quaternion.LookRotation(part.vessel.transform.up, -part.vessel.transform.forward), MechJebCore.AttitudeReference.INERTIAL, null);
             _attitudeActive = false;
             attitudeChanged = false;
 
-            timeWarp = (TimeWarp)GameObject.FindObjectOfType(typeof(TimeWarp));
+            timeWarp = TimeWarp.fetch;
 
             foreach (ComputerModule module in modules)
             {
@@ -1413,7 +1371,7 @@ namespace MuMech
                 print("F part.vessel == null");
                 return;
             }
-
+            /*
             if (part.vessel.orbit.objectType != Orbit.ObjectType.VESSEL)
             {
                 part.vessel.orbit.objectType = Orbit.ObjectType.VESSEL;
@@ -1431,7 +1389,7 @@ namespace MuMech
                     }
                 }
             }
-
+            */
             if (!allJebs.ContainsKey(part.vessel))
             {
                 allJebs[part.vessel] = new VesselStateKeeper();
@@ -1468,12 +1426,19 @@ namespace MuMech
                 {
                     MechJebModuleAutom8.instance = autom8;
                 }
+
+                if (part.vessel.packed)
+                {
+                    drive(part.vessel.ctrlState);
+                }
+                /*
                 else
                 {
                     FlightCtrlState s = new FlightCtrlState();
                     drive(s);
                     part.vessel.FeedInputFeed(s);
                 }
+                */
             }
 
         }
@@ -1762,7 +1727,7 @@ namespace MuMech
 
             if (flyByWire)
             {
-                FlightInputHandler.OnFlyByWire -= new FlightInputHandler.FlightInputCallback(onFlyByWire);
+                part.vessel.OnFlyByWire -= onFlyByWire;
                 flyByWire = false;
             }
             RenderingManager.RemoveFromPostDrawQueue(0, new Callback(drawGUI));
@@ -2044,7 +2009,7 @@ namespace MuMech
 
         public LuaValue proxyAttitudeTo(LuaValue[] arg)
         {
-            if ((arg.Count() != 2) || !(arg[0] is LuaTable))
+            if (arg.Count() != 2)
             {
                 throw new Exception("usage: attitudeTo(vector, reference)");
             }
