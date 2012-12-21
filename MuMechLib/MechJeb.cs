@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using MuMech;
 
-public class MuMechJeb : MuMechPart
+public class MuMechJeb : CommandPod
 {
     public enum DoorStat
     {

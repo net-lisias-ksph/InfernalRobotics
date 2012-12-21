@@ -8,15 +8,31 @@ public class MuMechModuleHullCamera : PartModule
 {
     private const bool adjustMode = false;
 
+    [KSPField]
     public Vector3 cameraPosition = Vector3.zero;
-    public Vector3 cameraForward = Vector3.forward;
-    public Vector3 cameraUp = Vector3.up;
-    public float cameraFoV = 60;
-    public float cameraClip = 0.01f;
-    public bool camActive = false;
-    public bool camEnabled = true;
 
     [KSPField]
+    public Vector3 cameraForward = Vector3.forward;
+
+    [KSPField]
+    public Vector3 cameraUp = Vector3.up;
+
+    [KSPField]
+    public string cameraTransformName = "";
+
+    [KSPField]
+    public float cameraFoV = 60;
+
+    [KSPField(isPersistant = false)]
+    public float cameraClip = 0.01f;
+
+    [KSPField]
+    public bool camActive = false;
+
+    [KSPField]
+    public bool camEnabled = true;
+
+    [KSPField(isPersistant = false)]
     public string cameraName = "Hull";
 
     public static List<MuMechModuleHullCamera> cameras = new List<MuMechModuleHullCamera>();
@@ -29,13 +45,15 @@ public class MuMechModuleHullCamera : PartModule
     protected static float origClip;
     protected static Texture2D overlayTex = null;
 
+    protected static int globalInput = 0;
+
     public void toMainCamera()
     {
         if ((cam != null) && (cam.transform != null))
         {
             cam.transform.parent = origParent;
             Camera.mainCamera.nearClipPlane = origClip;
-            foreach (Camera c in cam.GetComponentsInChildren<Camera>())
+            foreach (Camera c in Camera.allCameras)
             {
                 c.fov = origFoV;
             }
@@ -106,77 +124,28 @@ public class MuMechModuleHullCamera : PartModule
         }
     }
 
-    [KSPAction("Toggle Camera")]
-    public void ToggleCamera(KSPActionParam ap)
+    [KSPAction("Activate Camera")]
+    public void ActivateCameraAction(KSPActionParam ap)
     {
         ActivateCamera();
     }
 
-    [KSPAction("Next Camera")]
-    public void NextCamera(KSPActionParam ap)
+    [KSPAction("Deactivate Camera")]
+    public void DeactivateCameraAction(KSPActionParam ap)
     {
-        if (currentCamera != null)
-        {
-            int curCam = cameras.IndexOf(currentCamera);
-            if (curCam + 1 >= cameras.Count)
-            {
-                toMainCamera();
-            }
-            else
-            {
-                cameras[curCam + 1].ActivateCamera();
-            }
-        }
-        else
-        {
-            cameras.First().ActivateCamera();
-        }
+        globalInput |= 1;
+    }
+
+    [KSPAction("Next Camera")]
+    public void NextCameraAction(KSPActionParam ap)
+    {
+        globalInput |= 2;
     }
 
     [KSPAction("Previous Camera")]
-    public void PreviousCamera(KSPActionParam ap)
+    public void PreviousCameraAction(KSPActionParam ap)
     {
-        if (currentCamera != null)
-        {
-            int curCam = cameras.IndexOf(currentCamera);
-            if (curCam < 1)
-            {
-                toMainCamera();
-            }
-            else
-            {
-                cameras[curCam - 1].ActivateCamera();
-            }
-        }
-        else
-        {
-            cameras.Last().ActivateCamera();
-        }
-    }
-
-    public override void OnLoad(ConfigNode node)
-    {
-        base.OnLoad(node);
-        if (node.HasValue("cameraPosition")) cameraPosition = KSPUtil.ParseVector3(node.GetValue("cameraPosition"));
-        if (node.HasValue("cameraForward")) cameraForward = KSPUtil.ParseVector3(node.GetValue("cameraForward"));
-        if (node.HasValue("cameraUp")) cameraUp = KSPUtil.ParseVector3(node.GetValue("cameraUp"));
-        if (node.HasValue("camEnabled")) camEnabled = bool.Parse(node.GetValue("camEnabled"));
-        if (node.HasValue("cameraFoV")) cameraFoV = float.Parse(node.GetValue("cameraFoV"));
-        if (node.HasValue("cameraClip")) cameraClip = float.Parse(node.GetValue("cameraClip"));
-
-        camActive = false;
-    }
-
-    public override void OnSave(ConfigNode node)
-    {
-        node.AddValue("cameraPosition", KSPUtil.WriteVector(cameraPosition));
-        node.AddValue("cameraForward", KSPUtil.WriteVector(cameraForward));
-        node.AddValue("cameraUp", KSPUtil.WriteVector(cameraUp));
-        node.AddValue("camEnabled", camEnabled.ToString());
-        node.AddValue("cameraFoV", cameraFoV.ToString());
-        node.AddValue("cameraClip", cameraClip.ToString());
-
-        base.OnSave(node);
+        globalInput |= 4;
     }
 
     public void Update()
@@ -197,47 +166,52 @@ public class MuMechModuleHullCamera : PartModule
         if (currentHandler == this)
         {
             cameras.RemoveAll(item => item == null);
-            /*
-            if (Input.GetKeyUp(cameraKeyNext))
-            {
-                if (currentCamera != null)
-                {
-                    int curCam = cameras.IndexOf(currentCamera);
-                    if (curCam + 1 >= cameras.Count)
-                    {
-                        toMainCamera();
-                    }
-                    else
-                    {
-                        cameras[curCam + 1].ActivateCamera();
-                    }
-                }
-                else
-                {
-                    cameras.First().ActivateCamera();
-                }
-            }
+        }
 
-            if (Input.GetKeyUp(cameraKeyPrev))
+        if ((globalInput & 1) != 0)
+        {
+            toMainCamera();
+            globalInput -= 1;
+        }
+        if (((globalInput & 2) != 0) || Input.GetKeyDown(KeyCode.F7))
+        {
+            if (currentCamera != null)
             {
-                if (currentCamera != null)
+                int curCam = cameras.IndexOf(currentCamera);
+                if (curCam + 1 >= cameras.Count)
                 {
-                    int curCam = cameras.IndexOf(currentCamera);
-                    if (curCam < 1)
-                    {
-                        toMainCamera();
-                    }
-                    else
-                    {
-                        cameras[curCam - 1].ActivateCamera();
-                    }
+                    toMainCamera();
                 }
                 else
                 {
-                    cameras.Last().ActivateCamera();
+                    cameras[curCam + 1].ActivateCamera();
                 }
             }
-            */
+            else
+            {
+                cameras.First().ActivateCamera();
+            }
+            globalInput -= 2;
+        }
+        if (((globalInput & 4) != 0) || Input.GetKeyDown(KeyCode.F8))
+        {
+            if (currentCamera != null)
+            {
+                int curCam = cameras.IndexOf(currentCamera);
+                if (curCam < 1)
+                {
+                    toMainCamera();
+                }
+                else
+                {
+                    cameras[curCam - 1].ActivateCamera();
+                }
+            }
+            else
+            {
+                cameras.Last().ActivateCamera();
+            }
+            globalInput -= 4;
         }
         
         if ((currentCamera == this) && adjustMode) {
@@ -297,7 +271,7 @@ public class MuMechModuleHullCamera : PartModule
 
         if (cam == null)
         {
-            cam = (FlightCamera)GameObject.FindObjectOfType(typeof(FlightCamera));
+            cam = FlightCamera.fetch;
         }
 
         if ((cam != null) && (origParent == null))
@@ -330,10 +304,10 @@ public class MuMechModuleHullCamera : PartModule
         if ((origParent != null) && (cam != null) && camActive)
         {
             cam.setTarget(null);
-            cam.transform.parent = part.transform;
+            cam.transform.parent = (cameraTransformName.Length > 0) ? part.FindModelTransform(cameraTransformName) : part.transform;
             cam.transform.localPosition = cameraPosition;
             cam.transform.localRotation = Quaternion.LookRotation(cameraForward, cameraUp);
-            foreach (Camera c in cam.GetComponentsInChildren<Camera>())
+            foreach (Camera c in Camera.allCameras)
             {
                 c.fov = cameraFoV;
             }
@@ -345,8 +319,6 @@ public class MuMechModuleHullCamera : PartModule
 
     public override void OnStart(StartState state)
     {
-        //part.name = cameraName + " Camera";
-
         if (camEnabled && (state != StartState.None) && (state != StartState.Editor))
         {
             if (!cameras.Contains(this))

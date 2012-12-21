@@ -522,11 +522,8 @@ namespace MuMech
 
                     GUILayout.BeginHorizontal();
 
-                    if (warpPoint == WarpPoint.APOAPSIS || warpPoint == WarpPoint.PERIAPSIS)
-                    {
-                        warpTimeOffset = ARUtils.doGUITextInput("Lead time:", 150.0F, warpTimeOffsetString, 50.0F, "s", 30.0F,
-                                                               out warpTimeOffsetString, warpTimeOffset);
-                    }
+                    warpTimeOffset = ARUtils.doGUITextInput("Lead time:", 150.0F, warpTimeOffsetString, 50.0F, "s", 30.0F,
+                                                            out warpTimeOffsetString, warpTimeOffset);
 
                     if (GUILayout.Button("Warp"))
                     {
@@ -973,8 +970,16 @@ namespace MuMech
 
             if (warpPoint == WarpPoint.SOI_CHANGE)
             {
-                timeToTarget = part.vessel.orbit.timeToTransition1;
-                timeSinceTarget = double.MaxValue;
+                if (part.vessel.orbit.nextPatch != null)
+                {
+                    timeToTarget = part.vessel.orbit.nextPatch.StartUT - vesselState.time - warpTimeOffset;
+                    timeSinceTarget = double.MaxValue;
+                }
+                else
+                {
+                    endOperation(s);
+                    return;
+                }
             }
 
             else if (warpPoint == WarpPoint.APOAPSIS)

@@ -150,8 +150,8 @@ namespace MuMech
 
 
                     // Take the relative velocity and project into ship local space.
-                    _localRelativeVelocity = part.vessel.transform.worldToLocalMatrix.MultiplyVector(_relativeVelocity);
-                    _localRelativePosition = part.vessel.transform.worldToLocalMatrix.MultiplyPoint(selectedVessel.transform.position);
+                    _localRelativeVelocity = part.vessel.GetTransform().worldToLocalMatrix.MultiplyVector(_relativeVelocity);
+                    _localRelativePosition = part.vessel.GetTransform().worldToLocalMatrix.MultiplyPoint(selectedVessel.transform.position);
 
                     if (automation == true)
                     {
@@ -397,7 +397,7 @@ namespace MuMech
             {
                 Vector3 targetGoalPos = new Vector3(0.0f, 2.0f, 0.0f);
                 targetGoalPos = selectedVessel.transform.localToWorldMatrix.MultiplyPoint(targetGoalPos);
-                targetGoalPos = part.vessel.transform.worldToLocalMatrix.MultiplyPoint(targetGoalPos);
+                targetGoalPos = part.vessel.GetTransform().worldToLocalMatrix.MultiplyPoint(targetGoalPos);
 
                 Vector3 relPos = targetGoalPos;
                 Vector4 goalVel = Vector3.zero;
@@ -432,7 +432,7 @@ namespace MuMech
 
             Quaternion tgt = Quaternion.LookRotation(_tgtFwd, _tgtUp);
             Quaternion delta =
-                Quaternion.Inverse(Quaternion.Euler(90, 0, 0) * Quaternion.Inverse(part.vessel.transform.rotation) * tgt);
+                Quaternion.Inverse(Quaternion.Euler(90, 0, 0) * Quaternion.Inverse(part.vessel.GetTransform().rotation) * tgt);
 
             _headingError =
                 new Vector3((delta.eulerAngles.x > 180) ? (delta.eulerAngles.x - 360.0F) : delta.eulerAngles.x,

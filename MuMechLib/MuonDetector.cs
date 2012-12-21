@@ -78,7 +78,7 @@ public class MuMechMuonDetector : Part
             double nearest = double.PositiveInfinity;
             foreach (Animation mun in muns)
             {
-                double dist = (mun.transform.position - vessel.transform.position).magnitude;
+                double dist = (mun.transform.position - vessel.GetTransform().position).magnitude;
                 if (dist < nearest)
                 {
                     nearest = dist;

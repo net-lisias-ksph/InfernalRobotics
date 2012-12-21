@@ -28,9 +28,10 @@ namespace MuMech
             ORBIT_HORIZONTAL,  //forward = surface projection of orbit velocity, up = surface normal
             SURFACE_NORTH,     //forward = north, left = west, up = surface normal
             SURFACE_VELOCITY,  //forward = surface frame vessel velocity, up = perpendicular component of surface normal
-            TARGET,             //forward = toward target, up = perpendicular component of vessel heading
+            TARGET,            //forward = toward target, up = perpendicular component of vessel heading
             RELATIVE_VELOCITY, //forward = toward relative velocity direction, up = tbd
-            TARGET_ORIENTATION //forwad = direction target is facing, up = target up
+            TARGET_ORIENTATION,//forward = direction target is facing, up = target up
+            MANEUVER_NODE      //forward = next maneuver node direction, up = tbd
         }
         
         public enum TMode
@@ -86,6 +87,8 @@ namespace MuMech
         public MechJebModuleAutom8 autom8 = null;
 
         public VesselState vesselState;
+
+        private Vessel controlledVessel; //keep track of which vessel we've added our onFlyByWire callback to
 
         public Part part;
 
@@ -315,6 +318,12 @@ namespace MuMech
 
         private void onFlyByWire(FlightCtrlState s)
         {
+            if (controlledVessel != part.vessel)
+            {
+                controlledVessel.OnFlyByWire -= onFlyByWire;
+                part.vessel.OnFlyByWire += onFlyByWire;
+                controlledVessel = part.vessel;
+            }
             if ((part.vessel != FlightGlobals.ActiveVessel) || !allJebs.ContainsKey(part.vessel) || (allJebs[part.vessel].controller != this))
             {
                 return;
@@ -366,6 +375,11 @@ namespace MuMech
                 attitudeDeactivate(null);
                 return rotRef;
             }
+            if ((reference == AttitudeReference.MANEUVER_NODE) && (part.vessel.patchedConicSolver.maneuverNodes.Count == 0))
+            {
+                attitudeDeactivate(null);
+                return rotRef;
+            }
             switch (reference)
             {
                 case AttitudeReference.ORBIT:
@@ -381,7 +395,7 @@ namespace MuMech
                     rotRef = Quaternion.LookRotation(vesselState.velocityVesselSurfaceUnit, vesselState.up);
                     break;
                 case AttitudeReference.TARGET:
-                    fwd = (targetPosition() - part.vessel.transform.position).normalized;
+                    fwd = (targetPosition() - part.vessel.GetTransform().position).normalized;
                     up = Vector3d.Cross(fwd, vesselState.leftOrbit);
                     Vector3.OrthoNormalize(ref fwd, ref up);
                     rotRef = Quaternion.LookRotation(fwd, up);
@@ -402,6 +416,12 @@ namespace MuMech
                     {
                         rotRef = Quaternion.LookRotation(targetTransform.up, targetTransform.right);
                     }
+                    break;
+                case AttitudeReference.MANEUVER_NODE:
+                    fwd = part.vessel.patchedConicSolver.maneuverNodes[0].GetBurnVector(part.vessel.orbit);
+                    up = Vector3d.Cross(fwd, vesselState.leftOrbit);
+                    Vector3.OrthoNormalize(ref fwd, ref up);
+                    rotRef = Quaternion.LookRotation(fwd, up);
                     break;
             }
             return rotRef;
@@ -439,7 +459,7 @@ namespace MuMech
             Vector3 up, dir = direction;
             if (!attitudeActive || (ang_diff > 45))
             {
-                up = attitudeWorldToReference(-part.vessel.transform.forward, reference);
+                up = attitudeWorldToReference(-part.vessel.GetTransform().forward, reference);
             }
             else
             {
@@ -484,7 +504,7 @@ namespace MuMech
         }
         public float distanceFromTarget()
         {
-            return Vector3.Distance(targetPosition(), part.vessel.transform.position);
+            return Vector3.Distance(targetPosition(), part.vessel.GetTransform().position);
         }
         public Orbit targetOrbit()
         {
@@ -941,7 +961,7 @@ namespace MuMech
 
                 // Direction we want to be facing
                 Quaternion target = attitudeGetReferenceRotation(attitudeReference) * attitudeTarget;
-                Quaternion delta = Quaternion.Inverse(Quaternion.Euler(90, 0, 0) * Quaternion.Inverse(part.vessel.transform.rotation) * target);
+                Quaternion delta = Quaternion.Inverse(Quaternion.Euler(90, 0, 0) * Quaternion.Inverse(part.vessel.GetTransform().rotation) * target);
 
                 Vector3d deltaEuler = new Vector3d(
                                                       (delta.eulerAngles.x > 180) ? (delta.eulerAngles.x - 360.0F) : delta.eulerAngles.x,
@@ -1030,10 +1050,10 @@ namespace MuMech
 
             if (userCommandingPitchYaw || userCommandingRoll)
             {
-                s.killRot = false;
+                part.vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, false);
                 if (attitudeKILLROT)
                 {
-                    attitudeTo(Quaternion.LookRotation(part.vessel.transform.up, -part.vessel.transform.forward), AttitudeReference.INERTIAL, null);
+                    attitudeTo(Quaternion.LookRotation(part.vessel.GetTransform().up, -part.vessel.GetTransform().forward), AttitudeReference.INERTIAL, null);
                 }
             }
             else
@@ -1042,7 +1062,7 @@ namespace MuMech
                 double int_error = attitudeActive ? Math.Abs(Vector3d.Angle(attitudeGetReferenceRotation(attitudeReference) * attitudeTarget * Vector3d.forward, vesselState.forward)) : 0;
 
                 //Determine if we should have killRot on or not
-                s.killRot = (int_error < precision / 10.0) && (Math.Abs(deltaEuler.y) < Math.Min(0.5, precision / 2.0));
+                part.vessel.ActionGroups.SetGroup(KSPActionGroup.SAS, (int_error < precision / 10.0) && (Math.Abs(deltaEuler.y) < Math.Min(0.5, precision / 2.0)));
             }
 
             if (userCommandingRoll)
@@ -1052,7 +1072,7 @@ namespace MuMech
                 if (!attitudeRollMatters)
                 {
                     //human and computer roll
-                    attitudeTo(Quaternion.LookRotation(attitudeTarget * Vector3d.forward, attitudeWorldToReference(-part.vessel.transform.forward, attitudeReference)), attitudeReference, null);
+                    attitudeTo(Quaternion.LookRotation(attitudeTarget * Vector3d.forward, attitudeWorldToReference(-part.vessel.GetTransform().forward, attitudeReference)), attitudeReference, null);
                     _attitudeRollMatters = false;
                 }
             }
@@ -1336,9 +1356,10 @@ namespace MuMech
             firstDraw = true;
 
             part.vessel.OnFlyByWire += onFlyByWire;
+            controlledVessel = part.vessel;
             flyByWire = true;
 
-            attitudeTo(Quaternion.LookRotation(part.vessel.transform.up, -part.vessel.transform.forward), MechJebCore.AttitudeReference.INERTIAL, null);
+            attitudeTo(Quaternion.LookRotation(part.vessel.GetTransform().up, -part.vessel.GetTransform().forward), MechJebCore.AttitudeReference.INERTIAL, null);
             _attitudeActive = false;
             attitudeChanged = false;
 
@@ -1390,10 +1411,35 @@ namespace MuMech
                 }
             }
             */
+
             if (!allJebs.ContainsKey(part.vessel))
             {
                 allJebs[part.vessel] = new VesselStateKeeper();
                 allJebs[part.vessel].controller = this;
+                controlledVessel.OnFlyByWire -= onFlyByWire; //in case it was already added
+                part.vessel.OnFlyByWire += onFlyByWire;
+                controlledVessel = part.vessel;
+            }
+
+            if (allJebs[part.vessel].controller == null)
+            {
+                allJebs[part.vessel].controller = this;
+                controlledVessel.OnFlyByWire -= onFlyByWire; //in case it was already added
+                part.vessel.OnFlyByWire += onFlyByWire;
+                controlledVessel = part.vessel;
+            }
+
+            //check to see if this MechJebCore is listed in any *other* vessels, and delete that listing if so:
+            foreach (KeyValuePair<Vessel, VesselStateKeeper> pair in allJebs)
+            {
+                Vessel v = pair.Key;
+                VesselStateKeeper keeper = pair.Value;
+                if (v != this.part.vessel && keeper.jebs.Contains(this))
+                {
+                    keeper.jebs.Remove(this);
+                    if (keeper.controller == this) keeper.controller = null;
+                    v.OnFlyByWire -= onFlyByWire;
+                }
             }
 
             if (!allJebs[part.vessel].jebs.Contains(this))
@@ -1406,6 +1452,8 @@ namespace MuMech
                 allJebs[part.vessel].state.Update(part.vessel);
                 attitudeError = attitudeActive ? Math.Abs(Vector3d.Angle(attitudeGetReferenceRotation(attitudeReference) * attitudeTarget * Vector3d.forward, vesselState.forward)) : 0; ;
                 vesselState = allJebs[part.vessel].state;
+
+                part.SendEvent("MechJebVesselStateUpdated");
 
                 foreach (ComputerModule module in modules)
                 {
@@ -1460,6 +1508,9 @@ namespace MuMech
             {
                 allJebs[part.vessel] = new VesselStateKeeper();
                 allJebs[part.vessel].controller = this;
+                controlledVessel.OnFlyByWire -= onFlyByWire; //in case it was already added
+                part.vessel.OnFlyByWire += onFlyByWire;
+                controlledVessel = part.vessel;
             }
             if (!allJebs[part.vessel].jebs.Contains(this))
             {
@@ -1728,6 +1779,7 @@ namespace MuMech
             if (flyByWire)
             {
                 part.vessel.OnFlyByWire -= onFlyByWire;
+                controlledVessel = null;
                 flyByWire = false;
             }
             RenderingManager.RemoveFromPostDrawQueue(0, new Callback(drawGUI));

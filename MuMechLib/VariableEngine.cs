@@ -509,7 +509,7 @@ public class MuMechVariableEngine : LiquidEngine
         }
 
         float maxPress = vessel.mainBody.atmosphere ? (float)FlightGlobals.getStaticPressure(0, vessel.mainBody) : 0;
-        float curPress = vessel.mainBody.atmosphere ? (float)FlightGlobals.getStaticPressure(vessel.mainBody.GetAltitude(vessel.transform.position), vessel.mainBody) : 0;
+        float curPress = vessel.mainBody.atmosphere ? (float)FlightGlobals.getStaticPressure(vessel.mainBody.GetAltitude(vessel.GetTransform().position), vessel.mainBody) : 0;
 
         float eff = Mathf.Clamp01(Mathf.Lerp(efficiencyVacuum, efficiencyASL, (maxPress > 0) ? (curPress / maxPress) : 0));
         maxThrust = 0.0001F + maxThrustOrig * eff;

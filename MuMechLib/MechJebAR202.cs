@@ -6,7 +6,7 @@ using System.Text;
 using UnityEngine;
 using MuMech;
 
-public class MuMechJebAR202 : MuMechPart
+public class MuMechJebAR202 : CommandPod
 {
     public MechJebCore core = null;
 

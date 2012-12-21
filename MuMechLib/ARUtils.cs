@@ -8,7 +8,7 @@ using OrbitExtensions;
 namespace MuMech
 {
 
-    public class ARUtils
+    public static class ARUtils
     {
         public const double G = 6.674E-11; //this seems to be the value the game uses
 
@@ -54,13 +54,18 @@ namespace MuMech
             return thrust;
         }
 
+        public static float totalMass(this Part p)
+        {
+            return p.mass + p.GetResourceMass();
+        }
+
         //sum of mass of parts under root
         public static double totalMass(Vessel v)
         {
             double ret = 0;
             foreach (Part p in v.parts)
             {
-                ret += p.mass;
+                ret += p.totalMass();
             }
             return ret;
         }
@@ -207,7 +212,7 @@ namespace MuMech
             double ret = 0;
             foreach (Part p in v.parts)
             {
-                ret += p.maximum_drag * p.mass;
+                ret += p.maximum_drag * p.totalMass();
             }
             return ret;
         }

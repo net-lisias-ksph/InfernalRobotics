@@ -86,9 +86,9 @@ namespace MuMech
 
             north = Vector3d.Exclude(up, (vessel.mainBody.position + vessel.mainBody.transform.up * (float)vessel.mainBody.Radius) - CoM).normalized;
             east = vessel.mainBody.getRFrmVel(CoM).normalized;
-            forward = vessel.transform.up;
+            forward = vessel.GetTransform().up;
             rotationSurface = Quaternion.LookRotation(north, up);
-            rotationVesselSurface = Quaternion.Inverse(Quaternion.Euler(90, 0, 0) * Quaternion.Inverse(vessel.transform.rotation) * rotationSurface);
+            rotationVesselSurface = Quaternion.Inverse(Quaternion.Euler(90, 0, 0) * Quaternion.Inverse(vessel.GetTransform().rotation) * rotationSurface);
 
             velocityVesselOrbit = vessel.orbit.GetVel();
             velocityVesselOrbitUnit = velocityVesselOrbit.normalized;
@@ -96,7 +96,7 @@ namespace MuMech
             velocityVesselSurfaceUnit = velocityVesselSurface.normalized;
             velocityMainBodySurface = rotationSurface * velocityVesselSurface;
 
-            angularVelocity = Quaternion.Inverse(vessel.transform.rotation) * vessel.rigidbody.angularVelocity;
+            angularVelocity = Quaternion.Inverse(vessel.GetTransform().rotation) * vessel.rigidbody.angularVelocity;
 
             upNormalToVelSurface = Vector3d.Exclude(velocityVesselSurfaceUnit, up).normalized;
             upNormalToVelOrbit = Vector3d.Exclude(velocityVesselOrbit, up).normalized;
@@ -178,11 +178,7 @@ namespace MuMech
             {
                 if (p.physicalSignificance != Part.PhysicalSignificance.NONE)
                 {
-                    double partMass = p.mass;
-                    foreach (PartResource r in p.Resources)
-                    {
-                        partMass += r.amount * ARUtils.resourceDensity(r.info.id);
-                    }
+                    double partMass = p.totalMass();
                     mass += partMass;
                     massDrag += partMass * p.maximum_drag;
                 }
@@ -246,18 +242,36 @@ namespace MuMech
                         }
                     }
                 }
-                if ((!FlightInputHandler.RCSLock) && (p is RCSModule))
+
+                if (vessel.ActionGroups[KSPActionGroup.RCS])
                 {
-                    double maxT = 0;
-                    for (int i = 0; i < 6; i++)
+                    if (p is RCSModule)
                     {
-                        if (((RCSModule)p).thrustVectors[i] != Vector3.zero)
+                        double maxT = 0;
+                        for (int i = 0; i < 6; i++)
                         {
-                            maxT = Math.Max(maxT, ((RCSModule)p).thrusterPowers[i]);
+                            if (((RCSModule)p).thrustVectors[i] != Vector3.zero)
+                            {
+                                maxT = Math.Max(maxT, ((RCSModule)p).thrusterPowers[i]);
+                            }
+                        }
+                        torqueRAvailable += maxT;
+                        torquePYAvailable += maxT * (p.Rigidbody.worldCenterOfMass - CoM).magnitude;
+                    }
+
+                    if (p.Modules.Contains("ModuleRCS"))
+                    {
+                        foreach (ModuleRCS pm in p.Modules.OfType<ModuleRCS>())
+                        {
+                            double maxT = pm.thrustForces.Max();
+
+                            if ((pm.isEnabled) && (!pm.isJustForShow))
+                            {
+                                torqueRAvailable += maxT;
+                                torquePYAvailable += maxT * (p.Rigidbody.worldCenterOfMass - CoM).magnitude;
+                            }
                         }
                     }
-                    // torqueRAvailable += maxT;
-                    torquePYAvailable += maxT * (p.Rigidbody.worldCenterOfMass - CoM).magnitude;
                 }
                 if (p is CommandPod)
                 {

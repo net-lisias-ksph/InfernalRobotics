@@ -29,7 +29,8 @@ namespace MuMech
             TARGET_MINUS,
             PARALLEL_PLUS,
             PARALLEL_MINUS,
-            AUTO
+            AUTO,
+            NODE
         }
 
         private bool showHelpWindow = false;
@@ -149,6 +150,23 @@ namespace MuMech
                 GUILayout.EndHorizontal();
 
                 mode = (Mode)GUILayout.SelectionGrid((int)mode - 1, (FlightGlobals.fetch.VesselTarget == null) ? SASS_texts : SASS_tgtvessel_texts, 2, sty) + 1;
+
+                if (part.vessel.patchedConicSolver.maneuverNodes.Count > 0)
+                {
+                    GUIStyle nsty = new GUIStyle(sty);
+                    if (mode == Mode.NODE)
+                    {
+                        nsty.active = nsty.onActive;
+                        nsty.normal = nsty.onNormal;
+                        nsty.onFocused = nsty.focused;
+                        nsty.hover = nsty.onHover;
+                    }
+
+                    if (GUILayout.Button("NODE", nsty, GUILayout.ExpandWidth(true)))
+                    {
+                        mode = Mode.NODE;
+                    }
+                }
 
                 if (mode == Mode.SURFACE)
                 {
@@ -293,7 +311,7 @@ namespace MuMech
                     {
                         case Mode.KILLROT:
                             core.attitudeKILLROT = true;
-                            core.attitudeTo(Quaternion.LookRotation(part.vessel.transform.up, -part.vessel.transform.forward), MechJebCore.AttitudeReference.INERTIAL, this);
+                            core.attitudeTo(Quaternion.LookRotation(part.vessel.GetTransform().up, -part.vessel.GetTransform().forward), MechJebCore.AttitudeReference.INERTIAL, this);
                             break;
                         case Mode.SURFACE:
                             Quaternion r = Quaternion.AngleAxis(srf_act_hdg, Vector3.up) * Quaternion.AngleAxis(-srf_act_pit, Vector3.right);
@@ -335,7 +353,9 @@ namespace MuMech
                         case Mode.PARALLEL_MINUS:
                             core.attitudeTo(Vector3d.back, MechJebCore.AttitudeReference.TARGET_ORIENTATION, this);
                             break;
-
+                        case Mode.NODE:
+                            core.attitudeTo(Vector3d.forward, MechJebCore.AttitudeReference.MANEUVER_NODE, this);
+                            break;
                     }
                 }
                 else

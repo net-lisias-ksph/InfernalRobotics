@@ -218,11 +218,20 @@ namespace MuMech
 
         protected void buildSceneWindowGUI(int windowID)
         {
+            preventEditorClickthroughs();
+
             if (buildSceneMinimized)
             {
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button("Max")) buildSceneMinimized = false;
-                if (GUILayout.Button("X", ARUtils.buttonStyle(Color.red))) buildSceneShow = false;
+                if (GUILayout.Button("X", ARUtils.buttonStyle(Color.red)))
+                {
+                    if (weLockedEditor && EditorLogic.editorLocked)
+                    {
+                        EditorLogic.fetch.Unlock();
+                    }
+                    buildSceneShow = false;
+                }
                 GUILayout.EndHorizontal();
                 base.WindowGUI(windowID);
                 return;
@@ -234,8 +243,7 @@ namespace MuMech
             {
                 if (part.physicalSignificance != Part.PhysicalSignificance.NONE)
                 {
-                    mass += part.mass;
-                    foreach (PartResource r in part.Resources) mass += r.amount * ARUtils.resourceDensity(r.info.id);
+                    mass += part.totalMass();
                 }
 
                 //In the VAB, ModuleJettison (which adds fairings) forgets to subtract the fairing mass from
@@ -272,6 +280,10 @@ namespace MuMech
             }
             if (GUILayout.Button("Close", ARUtils.buttonStyle(Color.red)))
             {
+                if (weLockedEditor && EditorLogic.editorLocked)
+                {
+                    EditorLogic.fetch.Unlock();
+                }
                 buildSceneShow = false;
             }
             GUILayout.EndHorizontal();
@@ -444,6 +456,25 @@ namespace MuMech
                 float remainingSeconds = seconds - days*3600*24 - 3600 * hours - 60 * minutes;
                 return String.Format("{0:0}:{1:00}:{2:00}:{3:00}", days, hours, minutes, remainingSeconds);
             }
+        }
+
+
+        //Lifted this more or less directly from the Kerbal Engineer source. Thanks cybutek!
+        bool weLockedEditor = false;
+        void preventEditorClickthroughs()
+        {
+            Vector2 mousePos = Input.mousePosition;
+            mousePos.y = Screen.height - mousePos.y;
+            if (windowPos.Contains(mousePos) && !EditorLogic.editorLocked)
+            {
+                EditorLogic.fetch.Lock(true, true, true);
+                weLockedEditor = true;
+            }
+            if (weLockedEditor && !windowPos.Contains(mousePos) && EditorLogic.editorLocked)
+            {
+                EditorLogic.fetch.Unlock();
+            }
+            if (!EditorLogic.editorLocked) weLockedEditor = false;
         }
     }
 }
