@@ -60,7 +60,10 @@ public class MuMechMuonDetector : Part
 
     protected override void onPartDestroy()
     {
-        RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI));
+        if (ping != null)
+        {
+            RenderingManager.RemoveFromPostDrawQueue(3, new Callback(drawGUI));
+        }
         base.onPartDestroy();
     }
 

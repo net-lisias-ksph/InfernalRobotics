@@ -129,10 +129,8 @@ namespace SharpLua.Library
             {
                 if (m2.Name == m)
                 {
-                    UnityEngine.MonoBehaviour.print("Found " + m2 + " count = " + m2.GetGenericArguments().Length);
                     try
                     {
-                        UnityEngine.MonoBehaviour.print("Trying " + m2);
                         object result = m2.Invoke(t, args2.ToArray());
                         return ObjectToLua.ToLuaValue(result);
                     }

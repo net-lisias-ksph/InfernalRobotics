@@ -99,7 +99,7 @@ namespace MuMech
 
                 if (GUILayout.Button("EXECUTE", sty, GUILayout.ExpandWidth(true)))
                 {
-                    core.trans_spd_act = Convert.ToInt16(trans_spd);
+                    core.trans_spd_act = Convert.ToSingle(trans_spd);
                     GUIUtility.keyboardControl = 0;
                 }
             }

@@ -1781,8 +1781,8 @@ namespace MuMech
                 part.vessel.OnFlyByWire -= onFlyByWire;
                 controlledVessel = null;
                 flyByWire = false;
+                RenderingManager.RemoveFromPostDrawQueue(0, new Callback(drawGUI));
             }
-            RenderingManager.RemoveFromPostDrawQueue(0, new Callback(drawGUI));
         }
 
         public void onGamePause()

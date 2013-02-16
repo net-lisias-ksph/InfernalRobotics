@@ -318,8 +318,7 @@ namespace MuMech
                 //decide if it's possible to draw fuel through this node:
                 if (attachNode.attachedPart != null                                 //if there is a part attached here            
                     && attachNode.nodeType == AttachNode.NodeType.Stack             //and the attached part is stacked (rather than surface mounted)
-                    && (attachNode.attachedPart.fuelCrossFeed                       //and the attached part allows fuel flow
-                        || attachNode.attachedPart is FuelTank)                     //    or the attached part is a fuel tank
+                    && attachNode.attachedPart.fuelCrossFeed                        //and the attached part allows fuel flow
                     && !(this.part.NoCrossFeedNodeKey.Length > 0                    //and this part does not forbid fuel flow
                          && attachNode.id.Contains(this.part.NoCrossFeedNodeKey)))  //    through this particular node
                 {
@@ -328,16 +327,14 @@ namespace MuMech
                 }
             }
 
-            
-            //fuel lines are always allowed to draw fuel from their parents
-            if (this.part is FuelLine && this.part.parent != null) sourceNodes.Add(nodeLookup[this.part.parent]);
 
-            //engines are always allowed to draw fuel from their parents 
-            //(this is needed because none of the above rules allow radial-mount engines to draw fuel)
-            if (this.part.Modules.OfType<ModuleEngines>().Count() > 0 && this.part.parent != null) sourceNodes.Add(nodeLookup[this.part.parent]);
+            bool isFuelTank = false;
+            foreach (PartResource r in part.Resources)
+            {
+                if (r.maxAmount > 0 && r.info.name != "ElectricCharge") isFuelTank = true;
+            }
 
-            //print("source nodes for " + part);
-            //foreach (FuelNode n in sourceNodes) print("  -- " + n.part);
+            if (!isFuelTank && part.parent != null) sourceNodes.Add(nodeLookup[part.parent]);
         }
 
         //call this when a node no longer exists, so that this node knows that it's no longer a valid source

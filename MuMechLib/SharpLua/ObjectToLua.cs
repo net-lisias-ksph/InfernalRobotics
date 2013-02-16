@@ -97,19 +97,15 @@ namespace SharpLua
 
         private static void SetMemberValue(object control, Type type, string member, object value)
         {
-            UnityEngine.MonoBehaviour.print("Trying to set " + type.FullName + " - " + member + " to (" + value.GetType().FullName + ") " + value.ToString());
-
             PropertyInfo propertyInfo = type.GetProperty(member);
             if (propertyInfo != null)
             {
-                UnityEngine.MonoBehaviour.print("Type: Property - " + propertyInfo.PropertyType.FullName);
                 SetPropertyValue(control, value, propertyInfo);
                 return;
             }
             FieldInfo fieldInfo = type.GetField(member);
             if (fieldInfo != null)
             {
-                UnityEngine.MonoBehaviour.print("Type: Field - " + fieldInfo.FieldType.FullName);
                 SetFieldValue(control, value, fieldInfo);
                 return;
             }
@@ -169,10 +165,8 @@ namespace SharpLua
                                            {
                                                if (m.Name == member)
                                                {
-                                                   UnityEngine.MonoBehaviour.print("Found " + m + " count = " + m.GetGenericArguments().Length);
                                                     try
                                                     {
-                                                        UnityEngine.MonoBehaviour.print("Trying " + m);
                                                         object result = m.Invoke(control, args2.ToArray());
                                                         return ToLuaValue(result);
                                                     }

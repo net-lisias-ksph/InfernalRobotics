@@ -181,7 +181,8 @@ namespace MuMech
                 if (args[0].ToString().ToLower().Contains("pe")) warpPoint = WarpPoint.PERIAPSIS;
                 else if (args[0].ToString().ToLower().Contains("ap")) warpPoint = WarpPoint.APOAPSIS;
                 else if (args[0].ToString().ToLower().Contains("soi")) warpPoint = WarpPoint.SOI_CHANGE;
-                else throw new Exception("warpToEvent: event must be one of \"pe\", \"ap\", \"soi\"");
+                else if (args[0].ToString().ToLower().Contains("node")) warpPoint = WarpPoint.MANEUVER_NODE;
+                else throw new Exception("warpToEvent: event must be one of \"pe\", \"ap\", \"soi\", \"node\"");
             }
             catch (Exception)
             {
@@ -244,9 +245,9 @@ namespace MuMech
         bool showHelpWindow = false;
         Vector2 helpScrollPosition = new Vector2();
 
-        public enum WarpPoint { PERIAPSIS, APOAPSIS, SOI_CHANGE }
-        public String[] warpPointStrings = new String[] { "Periapsis", "Apoapsis", "SoI switch" };
-        public String[] warpPointStrings2 = new String[] { "periapsis", "apoapsis", "SoI switch" };
+        public enum WarpPoint { PERIAPSIS, APOAPSIS, SOI_CHANGE, MANEUVER_NODE }
+        public String[] warpPointStrings = new String[] { "Periapsis", "Apoapsis", "SoI switch", "Maneuver node" };
+        public String[] warpPointStrings2 = new String[] { "periapsis", "apoapsis", "SoI switch", "maneuver node" };
         WarpPoint warpPoint;
         double[] warpLookaheadTimes = new double[] { 0, 2.5, 5, 25, 50, 500, 10000, 100000 };
 
@@ -561,11 +562,8 @@ namespace MuMech
 
                 case Operation.WARP:
                     String offsetString = "";
-                    if (warpPoint != WarpPoint.SOI_CHANGE)
-                    {
-                        if (warpTimeOffset > 0) offsetString = "" + warpTimeOffset + "s before ";
-                        else if (warpTimeOffset < 0) offsetString = "" + Math.Abs(warpTimeOffset) + "s after ";
-                    }
+                    if (warpTimeOffset > 0) offsetString = "" + warpTimeOffset + "s before ";
+                    else if (warpTimeOffset < 0) offsetString = "" + Math.Abs(warpTimeOffset) + "s after ";
                     statusString = "Warping to " + offsetString + warpPointStrings2[(int)warpPoint];
                     break;
             }
@@ -603,7 +601,7 @@ namespace MuMech
 "While in Kerbin orbit, specify a desired munar periapsis. Hit \"Transfer to the Mun\" and MechJeb will warp to the appropriate point in your orbit, then execute a trans-munar injection (TMI) burn. The burn will be calculated so that when you enter the Mun's sphere of influence, your periapsis will be the one you specified. Once it has made the TMI burn, MechJeb will also display your predicted Munar periapsis, enabling you to make manual course corrections while you are still in Kerbin's sphere of influence.\n\n" +
 "Note: automatic trans-munar injection is likely to go wrong if you are in an orbit with an inclination greater than around 1 or 2 degrees, or a highly elliptical orbit. MechJeb assumes that you are starting from a zero-inclination, circular orbit around Kerbin.\n\n" +
 "WARP - Time warp:\n\n" +
-"This lets you time warp to apoapsis, periapsis, or the next sphere of influence (SoI) switch. Select one of these three and hit \"Warp\", and MechJeb will automatically ramp the time warp rate up and down to move you quickly to the specified point. When warping to periapsis or apoapsis you can specify a lead time. This lets you warp to, e.g. 15 seconds before periapsis. Note that when warping to the next SoI switch, MechJeb will not go above 1,000x warp, as often ramping down from the higher 10,000x warp carries you farther than you would like.\n\n" +
+"This lets you time warp to apoapsis, periapsis, the next sphere of influence (SoI) switch or the next maneuver node. Select one of these three and hit \"Warp\", and MechJeb will automatically ramp the time warp rate up and down to move you quickly to the specified point. You can also specify a lead time. This lets you warp to, e.g. 15 seconds before periapsis. Note that when warping to the next SoI switch, MechJeb will not go above 1,000x warp, as often ramping down from the higher 10,000x warp carries you farther than you would like.\n\n" +
 "Abort:\n\n" +
 "To immediately end any automatic operation, hit \"Abort\".\n\n" +
 "Status:\n\n" +
@@ -981,7 +979,6 @@ namespace MuMech
                     return;
                 }
             }
-
             else if (warpPoint == WarpPoint.APOAPSIS)
             {
                 if (part.vessel.orbit.eccentricity > 1.0)
@@ -993,7 +990,6 @@ namespace MuMech
                 timeToTarget = (part.vessel.orbit.timeToAp - warpTimeOffset + part.vessel.orbit.period) % part.vessel.orbit.period;
                 timeSinceTarget = (2 * part.vessel.orbit.period - part.vessel.orbit.timeToAp + warpTimeOffset) % part.vessel.orbit.period;
             }
-
             else if (warpPoint == WarpPoint.PERIAPSIS)
             {
                 double timeToPe = part.vessel.orbit.timeToPe;
@@ -1006,14 +1002,33 @@ namespace MuMech
                 else
                 {
                     timeToTarget = timeToPe - warpTimeOffset;
-                    timeSinceTarget = 1.0e30;
+                    timeSinceTarget = double.MaxValue;
+                }
+            }
+            else if (warpPoint == WarpPoint.MANEUVER_NODE)
+            {
+                if (part.vessel.patchedConicSolver.maneuverNodes.Count == 0)
+                {
+                    endOperation(s);
+                    return;
+                }
+
+                double nodeDeltaUT = part.vessel.patchedConicSolver.maneuverNodes[0].UT - vesselState.time - warpTimeOffset;
+
+                if (nodeDeltaUT >= 0)
+                {
+                    timeToTarget = nodeDeltaUT;
+                    timeSinceTarget = double.MaxValue;
+                }
+                else
+                {
+                    timeToTarget = double.MaxValue;
+                    timeSinceTarget = -nodeDeltaUT;
                 }
             }
             
             if (timeToTarget < 1.0 || timeSinceTarget < 10.0) endOperation(s);
             else core.warpTo(this, timeToTarget, warpLookaheadTimes);
-
-
         }
 
         void endOperation(FlightCtrlState s)

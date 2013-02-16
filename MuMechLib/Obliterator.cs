@@ -20,7 +20,7 @@ class MuMechObliteratorGhost : MonoBehaviour
 
     void Update()
     {
-        if (FlightGlobals.ready)
+        if (FlightGlobals.ready && (Planetarium.Orbits != null))
         {
             foreach (OrbitDriver o in Planetarium.Orbits)
             {
@@ -73,12 +73,14 @@ class MuMechObliterator : Part
             GameObject.Destroy(GameObject.Find("interior_vehicleassembly"));
             Camera.mainCamera.GetComponent<VABCamera>().maxHeight *= 100;
             Camera.mainCamera.GetComponent<VABCamera>().maxDistance *= 100;
+            GameObject.Find("GameLogic").GetComponent<EditorLogic>().maxHeight *= 100;
         }
         if (GameObject.Find("xport_sph3") != null)
         {
             GameObject.Destroy(GameObject.Find("xport_sph3"));
             Camera.mainCamera.GetComponent<SPHCamera>().maxHeight *= 100;
             Camera.mainCamera.GetComponent<SPHCamera>().maxDistance *= 100;
+            GameObject.Find("GameLogic").GetComponent<EditorLogic>().maxHeight *= 100;
         }
     }
 }

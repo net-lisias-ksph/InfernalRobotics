@@ -38,12 +38,12 @@ namespace MuMech
                 return;
             }
 
-            if ((globalInput & 1024) != 0)
+            if (((globalInput & 1024) != 0) || GameSettings.ZOOM_IN.GetKeyDown() || (Input.GetAxis("Mouse ScrollWheel") > 0))
             {
                 cameraFoV = Mathf.Clamp(cameraFoV / cameraZoomMult, cameraFoVMin, cameraFoVMax);
                 globalInput -= 1024;
             }
-            if ((globalInput & 2048) != 0)
+            if ((globalInput & 2048) != 0 || GameSettings.ZOOM_OUT.GetKeyDown() || (Input.GetAxis("Mouse ScrollWheel") < 0))
             {
                 cameraFoV = Mathf.Clamp(cameraFoV * cameraZoomMult, cameraFoVMin, cameraFoVMax);
                 globalInput -= 2048;

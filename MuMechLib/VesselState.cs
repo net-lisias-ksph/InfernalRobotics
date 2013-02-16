@@ -184,7 +184,7 @@ namespace MuMech
                 }
 
                 MoI += p.Rigidbody.inertiaTensor;
-                if (((p.State == PartStates.ACTIVE) || ((Staging.CurrentStage > Staging.lastStage) && (p.inverseStage == Staging.lastStage))) && ((p is LiquidEngine) || (p is LiquidFuelEngine) || (p is SolidRocket) || (p is AtmosphericEngine) || p.Modules.Contains("ModuleEngines")))
+                if ((p.State == PartStates.ACTIVE) || ((Staging.CurrentStage > Staging.lastStage) && (p.inverseStage == Staging.lastStage)))
                 {
                     if (p is LiquidEngine && ARUtils.engineHasFuel(p))
                     {
@@ -233,11 +233,24 @@ namespace MuMech
 
                                 if (e.throttleLocked) thrustMinimum += e.maxThrust * usableFraction;
                                 else thrustMinimum += e.minThrust * usableFraction;
-                                
+
                                 if (p.Modules.OfType<ModuleGimbal>().Count() > 0)
                                 {
                                     torqueThrustPYAvailable += Math.Sin(Math.Abs(p.Modules.OfType<ModuleGimbal>().First().gimbalRange) * Math.PI / 180) * e.maxThrust * (p.Rigidbody.worldCenterOfMass - CoM).magnitude; // TODO: close enough?
                                 }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach (PartModule pm in p.Modules)
+                        {
+                            CenterOfThrustQuery ctq = new CenterOfThrustQuery();
+                            pm.BroadcastMessage("OnCenterOfThrustQuery", ctq, SendMessageOptions.DontRequireReceiver);
+                            if (ctq.thrust > 0)
+                            {
+                                double usableFraction = 1; // Vector3d.Dot((p.transform.rotation * e.thrustTransform.forward).normalized, forward); // TODO: Fix usableFraction
+                                thrustAvailable += ctq.thrust * usableFraction;
                             }
                         }
                     }
