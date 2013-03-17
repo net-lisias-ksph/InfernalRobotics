@@ -225,7 +225,7 @@ namespace MuMech
                     {
                         foreach (PartModule pm in p.Modules)
                         {
-                            if ((pm is ModuleEngines) && (pm.isEnabled) && ARUtils.engineHasFuel(p))
+                            if ((pm is ModuleEngines) && (pm.isEnabled) && ARUtils.engineHasFuel(p) && ((ModuleEngines)p.Modules["ModuleEngines"]).getIgnitionState)
                             {
                                 ModuleEngines e = (ModuleEngines)pm;
                                 double usableFraction = 1; // Vector3d.Dot((p.transform.rotation * e.thrustTransform.forward).normalized, forward); // TODO: Fix usableFraction

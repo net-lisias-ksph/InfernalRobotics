@@ -78,6 +78,8 @@ public class MuMechToggle : MuMechPart
     protected int rotationChanged = 0;
     protected int translationChanged = 0;
 
+    public int moveFlags = 0;
+
     public override void onFlightStateSave(Dictionary<string, KSPParseable> partDataCollection)
     {
         partDataCollection.Add("on", new KSPParseable(on, KSPParseable.Type.BOOL));
@@ -87,6 +89,9 @@ public class MuMechToggle : MuMechPart
         partDataCollection.Add("reversedTranslationKey", new KSPParseable(reversedTranslationKey, KSPParseable.Type.BOOL));
         partDataCollection.Add("rot", new KSPParseable(rotation, KSPParseable.Type.FLOAT));
         partDataCollection.Add("trans", new KSPParseable(translation, KSPParseable.Type.FLOAT));
+        partDataCollection.Add("rotD", new KSPParseable(rotationDelta, KSPParseable.Type.FLOAT));
+        partDataCollection.Add("transD", new KSPParseable(translationDelta, KSPParseable.Type.FLOAT));
+
         base.onFlightStateSave(partDataCollection);
     }
 
@@ -99,7 +104,13 @@ public class MuMechToggle : MuMechPart
         if (parsedData.ContainsKey("reversedTranslationKey")) reversedTranslationKey = parsedData["reversedTranslationKey"].value_bool;
         if (parsedData.ContainsKey("rot")) rotation = parsedData["rot"].value_float;
         if (parsedData.ContainsKey("trans")) translation = parsedData["trans"].value_float;
+        if (parsedData.ContainsKey("rotD")) rotationDelta = parsedData["rotD"].value_float;
+        if (parsedData.ContainsKey("transD")) translationDelta = parsedData["transD"].value_float;
         updateState();
+
+        rotationDelta = rotationLast = rotation;
+        translationDelta = translation;
+
         base.onFlightStateLoad(parsedData);
     }
 
@@ -179,7 +190,7 @@ public class MuMechToggle : MuMechPart
     protected override void onPartAwake()
     {
         colliderizeChilds(transform.FindChild("model"));
-        base.onPartLoad();
+        base.onPartAwake();
     }
 
     protected override void onPartLoad()
@@ -219,6 +230,8 @@ public class MuMechToggle : MuMechPart
             if (obj.GetChild(i).name.StartsWith("fixed_node_collider") && (parent != null))
             {
                 print("Toggle: reparenting collider " + obj.GetChild(i).name);
+                obj.GetChild(i).RotateAround(transform.TransformPoint(rotatePivot), transform.TransformDirection(-rotateAxis), (invertSymmetry ? ((isSymmMaster() || (symmetryCounterparts.Count != 1)) ? -1 : 1) : -1) * rotation);
+                obj.GetChild(i).Translate(transform.TransformDirection(translateAxis.normalized) * -translation, Space.World);
                 obj.GetChild(i).parent = parent.transform;
             }
         }
@@ -244,14 +257,12 @@ public class MuMechToggle : MuMechPart
             Transform fix = transform.FindChild("model").FindChild(fixedMesh);
             if ((fix != null) && (parent != null))
             {
+                fix.RotateAround(transform.TransformPoint(rotatePivot), transform.TransformDirection(rotateAxis.normalized), (invertSymmetry ? ((isSymmMaster() || (symmetryCounterparts.Count != 1)) ? 1 : -1) : 1) * rotation);
+                fix.Translate(transform.TransformDirection(translateAxis.normalized) * -translation, Space.World);
                 fix.parent = parent.transform;
             }
         }
         reparentFriction(transform);
-        transform.RotateAround(transform.TransformPoint(rotatePivot), transform.TransformDirection(-rotateAxis), (invertSymmetry ? ((isSymmMaster() || (symmetryCounterparts.Count != 1)) ? 1 : -1) : 1) * (rotation - rotationDelta));
-        transform.Translate(translateAxis.normalized * (translation - translationDelta), Space.Self);
-        rotationDelta = rotationLast = rotation;
-        translationDelta = translation;
         on = true;
         updateState();
     }
@@ -277,17 +288,18 @@ public class MuMechToggle : MuMechPart
     {
         if (!gotOrig)
         {
+            print("setupJoints - !gotOrig");
             if ((rotate_model != "") && (transform.FindChild("model").FindChild(rotate_model) != null))
             {
                 origRotation = transform.FindChild("model").FindChild(rotate_model).localRotation;
             }
-            if (translateJoint)
-            {
-                origTranslation = transform.localPosition;
-            }
             else if ((translate_model != "") && (transform.FindChild("model").FindChild(translate_model) != null))
             {
                 origTranslation = transform.FindChild("model").FindChild(translate_model).localPosition;
+            }
+            if (translateJoint)
+            {
+                origTranslation = transform.localPosition;
             }
             if (rotateJoint || translateJoint)
             {
@@ -364,7 +376,7 @@ public class MuMechToggle : MuMechPart
 
     protected override void onPartUpdate()
     {
-        if (connected && Input.GetKeyDown(onKey) && (vessel == FlightGlobals.ActiveVessel))
+        if (connected && Input.GetKeyDown(onKey) && (vessel == FlightGlobals.ActiveVessel) && InputLockManager.IsUnlocked(ControlTypes.LINEAR))
         {
             on = !on;
             updateState();
@@ -418,16 +430,42 @@ public class MuMechToggle : MuMechPart
             rotation += TimeWarp.fixedDeltaTime * onRotateSpeed * (reversedRotationOn ? -1 : 1);
             rotationChanged |= 1;
         }
-        if ((keyRotateSpeed != 0) && Input.GetKey(rotateKey) && (vessel == FlightGlobals.ActiveVessel))
+
+        if (((keyRotateSpeed != 0) && Input.GetKey(rotateKey) && (vessel == FlightGlobals.ActiveVessel) && InputLockManager.IsUnlocked(ControlTypes.LINEAR)) || ((moveFlags & 0x101) != 0))
         {
             rotation += TimeWarp.fixedDeltaTime * keyRotateSpeed * (reversedRotationKey ? -1 : 1);
             rotationChanged |= 2;
         }
-        if ((keyRotateSpeed != 0) && Input.GetKey(revRotateKey) && (vessel == FlightGlobals.ActiveVessel))
+        if (((keyRotateSpeed != 0) && Input.GetKey(revRotateKey) && (vessel == FlightGlobals.ActiveVessel) && InputLockManager.IsUnlocked(ControlTypes.LINEAR)) || ((moveFlags & 0x202) != 0))
         {
             rotation -= TimeWarp.fixedDeltaTime * keyRotateSpeed * (reversedRotationKey ? -1 : 1);
             rotationChanged |= 2;
         }
+
+        if (on && (onTranslateSpeed != 0))
+        {
+            translation += TimeWarp.fixedDeltaTime * onTranslateSpeed * (reversedTranslationOn ? -1 : 1);
+            translationChanged |= 1;
+        }
+        if (((keyTranslateSpeed != 0) && Input.GetKey(translateKey) && (vessel == FlightGlobals.ActiveVessel) && InputLockManager.IsUnlocked(ControlTypes.LINEAR)) || ((moveFlags & 0x101) != 0))
+        {
+            translation += TimeWarp.fixedDeltaTime * keyTranslateSpeed * (reversedTranslationKey ? -1 : 1);
+            translationChanged |= 2;
+        }
+        if (((keyTranslateSpeed != 0) && Input.GetKey(revTranslateKey) && (vessel == FlightGlobals.ActiveVessel) && InputLockManager.IsUnlocked(ControlTypes.LINEAR)) || ((moveFlags & 0x202) != 0))
+        {
+            translation -= TimeWarp.fixedDeltaTime * keyTranslateSpeed * (reversedTranslationKey ? -1 : 1);
+            translationChanged |= 2;
+        }
+
+        if (((moveFlags & 0x404) != 0) && (rotationChanged == 0) && (translationChanged == 0))
+        {
+            rotation -= Mathf.Sign(rotation) * Mathf.Min(Mathf.Abs(keyRotateSpeed * TimeWarp.deltaTime), Mathf.Abs(rotation));
+            translation -= Mathf.Sign(translation) * Mathf.Min(Mathf.Abs(keyTranslateSpeed * TimeWarp.deltaTime), Mathf.Abs(translation));
+            rotationChanged |= 2;
+            translationChanged |= 2;
+        }
+
         if (rotateLimits)
         {
             if (rotation < rotateMin)
@@ -465,6 +503,19 @@ public class MuMechToggle : MuMechPart
                 }
             }
         }
+        else
+        {
+            if (rotation >= 180)
+            {
+                rotation -= 360;
+                rotationDelta -= 360;
+            }
+            if (rotation < -180)
+            {
+                rotation += 360;
+                rotationDelta += 360;
+            }
+        }
         if (Math.Abs(rotation - rotationDelta) > 120)
         {
             rotationDelta = rotationLast;
@@ -472,21 +523,6 @@ public class MuMechToggle : MuMechPart
             attachJoint.connectedBody = parent.Rigidbody;
         }
 
-        if (on && (onTranslateSpeed != 0))
-        {
-            translation += TimeWarp.fixedDeltaTime * onTranslateSpeed * (reversedTranslationOn ? -1 : 1);
-            translationChanged |= 1;
-        }
-        if ((keyTranslateSpeed != 0) && Input.GetKey(translateKey) && (vessel == FlightGlobals.ActiveVessel))
-        {
-            translation += TimeWarp.fixedDeltaTime * keyTranslateSpeed * (reversedTranslationKey ? -1 : 1);
-            translationChanged |= 2;
-        }
-        if ((keyTranslateSpeed != 0) && Input.GetKey(revTranslateKey) && (vessel == FlightGlobals.ActiveVessel))
-        {
-            translation -= TimeWarp.fixedDeltaTime * keyTranslateSpeed * (reversedTranslationKey ? -1 : 1);
-            translationChanged |= 2;
-        }
         if (translateLimits)
         {
             if (translation < translateMin)
@@ -538,7 +574,6 @@ public class MuMechToggle : MuMechPart
                 Quaternion curRot = Quaternion.AngleAxis((invertSymmetry ? ((isSymmMaster() || (symmetryCounterparts.Count != 1)) ? 1 : -1) : 1) * rotation, rotateAxis);
                 transform.FindChild("model").FindChild(rotate_model).localRotation = curRot;
             }
-            rotationChanged = 0;
         }
         if ((translationChanged != 0) && (translateJoint || (transform.FindChild("model").FindChild(translate_model) != null)))
         {
@@ -550,7 +585,18 @@ public class MuMechToggle : MuMechPart
             {
                 transform.FindChild("model").FindChild(translate_model).localPosition = origTranslation + translateAxis.normalized * (translation - translationDelta);
             }
-            translationChanged = 0;
+        }
+
+        rotationChanged = 0;
+        translationChanged = 0;
+
+        if (vessel != null)
+        {
+            UpdateOrgPosAndRot(vessel.rootPart);
+            foreach (Part child in FindChildParts<Part>(true))
+            {
+                child.UpdateOrgPosAndRot(vessel.rootPart);
+            }
         }
     }
 

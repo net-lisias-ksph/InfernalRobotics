@@ -10,8 +10,8 @@ namespace MuMech
     public class ServoGroup
     {
         public string name = "New Group";
-        public string key = "9";
-        public string revKey = "0";
+        public string key = "";
+        public string revKey = "";
     }
 }
 
@@ -165,6 +165,48 @@ public class MuMechServo : MuMechToggle
         base.onPartDestroy();
     }
 
+    [KSPAction("Move +")]
+    public void MovePlusAction(KSPActionParam param)
+    {
+        switch (param.type)
+        {
+            case KSPActionType.Activate:
+                moveFlags |= 0x100;
+                break;
+            case KSPActionType.Deactivate:
+                moveFlags &= ~0x100;
+                break;
+        }
+    }
+
+    [KSPAction("Move -")]
+    public void MoveMinusAction(KSPActionParam param)
+    {
+        switch (param.type)
+        {
+            case KSPActionType.Activate:
+                moveFlags |= 0x200;
+                break;
+            case KSPActionType.Deactivate:
+                moveFlags &= ~0x200;
+                break;
+        }
+    }
+
+    [KSPAction("Move Center")]
+    public void MoveCenterAction(KSPActionParam param)
+    {
+        switch (param.type)
+        {
+            case KSPActionType.Activate:
+                moveFlags |= 0x400;
+                break;
+            case KSPActionType.Deactivate:
+                moveFlags &= ~0x400;
+                break;
+        }
+    }
+
     protected override void onPartFixedUpdate()
     {
         foreach (Part p in vessel.parts)
@@ -180,11 +222,15 @@ public class MuMechServo : MuMechToggle
             RenderingManager.AddToPostDrawQueue(0, new Callback(drawGUI));
             GUIController = this;
         }
+
         base.onPartFixedUpdate();
     }
 
     private void editorWindowGUI(int windowID)
     {
+        Vector2 mousePos = Input.mousePosition;
+        mousePos.y = Screen.height - mousePos.y;
+
         editorScroll = GUILayout.BeginScrollView(editorScroll, false, false, GUILayout.MaxHeight(Screen.height / 2));
 
         GUILayout.BeginVertical();
@@ -267,6 +313,10 @@ public class MuMechServo : MuMechToggle
                 {
                     GUILayout.BeginHorizontal();
                     servo.servoName = GUILayout.TextField(servo.servoName, GUILayout.ExpandWidth(true));
+                    if (editorWinPos.Contains(mousePos))
+                    {
+                        servo.SetHighlight(GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition));
+                    }
                     if (GUILayout.Button("<", GUILayout.Width(20)))
                     {
                         servo.transform.RotateAround(servo.transform.up, Mathf.PI / 4);
@@ -327,6 +377,11 @@ public class MuMechServo : MuMechToggle
     {
         GUILayout.BeginVertical();
 
+        foreach (MuMechServo servo in allServos)
+        {
+            servo.moveFlags &= ~0xFF;
+        }
+
         for (int i = 0; i < groups.Count; i++)
         {
             List<MuMechServo> groupServos = new List<MuMechServo>();
@@ -342,21 +397,10 @@ public class MuMechServo : MuMechToggle
                 GUILayout.BeginHorizontal();
 
                 GUILayout.Label(groups[i].name, GUILayout.ExpandWidth(true));
-                if (GUILayout.RepeatButton("<", GUILayout.Width(20)))
+                int forceFlags = (GUILayout.RepeatButton("<", GUILayout.Width(20))?1:0) + (GUILayout.RepeatButton("O", GUILayout.Width(20))?4:0) + (GUILayout.RepeatButton(">", GUILayout.Width(20))?2:0);
+                foreach (MuMechServo servo in groupServos)
                 {
-                    foreach (MuMechServo servo in groupServos)
-                    {
-                        servo.rotate(servo.keyRotateSpeed * TimeWarp.fixedDeltaTime * (servo.reversedRotationKey ? -1 : 1));
-                        servo.translate(servo.keyTranslateSpeed * TimeWarp.fixedDeltaTime * (servo.reversedTranslationKey ? -1 : 1));
-                    }
-                }
-                if (GUILayout.RepeatButton(">", GUILayout.Width(20)))
-                {
-                    foreach (MuMechServo servo in groupServos)
-                    {
-                        servo.rotate(servo.keyRotateSpeed * TimeWarp.fixedDeltaTime * (servo.reversedRotationKey ? 1 : -1));
-                        servo.translate(servo.keyTranslateSpeed * TimeWarp.fixedDeltaTime * (servo.reversedTranslationKey ? 1 : -1));
-                    }
+                    servo.moveFlags |= forceFlags;
                 }
 
                 GUILayout.EndHorizontal();
@@ -379,7 +423,7 @@ public class MuMechServo : MuMechToggle
                 break;
             }
         }
-        if (servosPresent && InputLockManager.IsUnlocked(ControlTypes.THROTTLE))
+        if (servosPresent && InputLockManager.IsUnlocked(ControlTypes.LINEAR))
         {
             if (winPos.x == 0 && winPos.y == 0)
             {

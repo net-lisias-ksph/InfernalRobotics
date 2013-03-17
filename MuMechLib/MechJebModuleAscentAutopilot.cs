@@ -498,7 +498,7 @@ namespace MuMech
         {
             if (mode == AscentMode.DISENGAGED) return;
 
-            if (mode == AscentMode.ON_PAD && Staging.CurrentStage <= Staging.lastStage) mode = AscentMode.VERTICAL_ASCENT;
+            if (mode == AscentMode.ON_PAD && !timeIgnitionForRendezvous && Staging.CurrentStage <= Staging.lastStage) mode = AscentMode.VERTICAL_ASCENT;
 
             switch (mode)
             {
@@ -572,7 +572,10 @@ namespace MuMech
                 if (rendezvousIgnitionCountdown < 0.0 && rendezvousIgnitionCountdown > -1.0)
                 {
                     mode = AscentMode.VERTICAL_ASCENT;
-                    Staging.ActivateNextStage();
+                    if (Staging.CurrentStage > Staging.lastStage)
+                    {
+                        Staging.ActivateNextStage();
+                    }
                 }
                 else
                 {

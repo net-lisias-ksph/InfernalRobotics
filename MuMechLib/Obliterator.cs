@@ -38,7 +38,7 @@ class MuMechObliteratorGhost : MonoBehaviour
                                 if (parentObject.GetChild(i).name.StartsWith(n))
                                 {
                                     GameObject target = parentObject.GetChild(i).gameObject;
-                                    print("Obliterator - Destroying " + target.name);
+                                    // print("Obliterator - Destroying " + target.name);
                                     target.transform.parent = null;
                                     GameObject.Destroy(target);
                                 }

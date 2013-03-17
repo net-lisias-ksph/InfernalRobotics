@@ -185,6 +185,7 @@ namespace MuMech
             {
                 if (node.isEngine && node.part.inverseStage >= simStage && node.canDrawNeededResources(nodes))
                 {
+                    if (HighLogic.LoadedSceneIsFlight && node.part.inverseStage >= Staging.CurrentStage && node.part.Modules.Contains("ModuleEngines") && !((ModuleEngines)node.part.Modules["ModuleEngines"]).getIgnitionState) { continue; } // skip if deactivated ModuleEngine in current stage
                     engines.Add(node);
                 }
             }

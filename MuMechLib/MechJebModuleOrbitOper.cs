@@ -246,8 +246,8 @@ namespace MuMech
         Vector2 helpScrollPosition = new Vector2();
 
         public enum WarpPoint { PERIAPSIS, APOAPSIS, SOI_CHANGE, MANEUVER_NODE }
-        public String[] warpPointStrings = new String[] { "Periapsis", "Apoapsis", "SoI switch", "Maneuver node" };
-        public String[] warpPointStrings2 = new String[] { "periapsis", "apoapsis", "SoI switch", "maneuver node" };
+        public String[] warpPointStrings = new String[] { "Periapsis", "Apoapsis", "SoI", "Node" };
+        public String[] warpPointStrings2 = new String[] { "periapsis", "apoapsis", "SoI", "node" };
         WarpPoint warpPoint;
         double[] warpLookaheadTimes = new double[] { 0, 2.5, 5, 25, 50, 500, 10000, 100000 };
 
@@ -461,7 +461,7 @@ namespace MuMech
                             Orbit transferOrbit = ARUtils.computeOrbit(part.vessel, deltaV * vesselState.velocityVesselOrbitUnit, vesselState.time);
                             double arrivalTime = vesselState.time + transferOrbit.timeToAp;
                             Vector3d vesselArrivalPosition = transferOrbit.getAbsolutePositionAtUT(arrivalTime);
-                            Orbit targetOrbit = ARUtils.computeOrbit(body.position, (FlightGlobals.RefFrameIsRotating ? -1 : 1) * body.orbit.GetVel(), part.vessel.mainBody, vesselState.time);
+                            Orbit targetOrbit = ARUtils.computeOrbit(body.position, body.orbit.GetVel(), part.vessel.mainBody, vesselState.time);
                             Vector3d targetArrivalPosition = targetOrbit.getAbsolutePositionAtUT(arrivalTime);
                             Vector3d targetPlaneNormal = Vector3d.Cross(body.position - part.vessel.mainBody.position, body.orbit.GetVel());
                             Vector3d vesselArrivalPositionTargetPlane = part.vessel.mainBody.position + Vector3d.Exclude(targetPlaneNormal, vesselArrivalPosition - part.vessel.mainBody.position);
@@ -809,9 +809,7 @@ namespace MuMech
             double arrivalTime = vesselState.time + transferOrbit.timeToAp;
             Vector3d vesselArrivalPosition = transferOrbit.getAbsolutePositionAtUT(arrivalTime);
 
-            //minus sign is there because transferTarget.orbit.GetVel() seems to be mysteriously negated
-            //when the ship is in the rotating reference frame of the original body.
-            Orbit targetOrbit = ARUtils.computeOrbit(transferTarget.position, (FlightGlobals.RefFrameIsRotating ? -1 : 1) * transferTarget.orbit.GetVel(), part.vessel.mainBody, vesselState.time);
+            Orbit targetOrbit = ARUtils.computeOrbit(transferTarget.position, transferTarget.orbit.GetVel(), part.vessel.mainBody, vesselState.time);
 
             Vector3d targetArrivalPosition = targetOrbit.getAbsolutePositionAtUT(arrivalTime);
 
