@@ -1,5 +1,7 @@
 # Infernal Robotics :: Change Log
 
+* 2018-0403: 3.0.0-beta2p1 (Rudolf Meier) for KSP 1.2.2 PRE-RELEASE
+	+ No changelog provided
 * 2018-0330: 3.0.0-beta2 (Rudolf Meier) for KSP 1.2.2 PRE-RELEASE
 	+ Beta of project "Next", almost done...
 	+ Includes the "rework" parts but not KJR. For best results use my version of KJR at version 3.4.0 or higher.
