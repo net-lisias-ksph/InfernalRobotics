@@ -1,5 +1,8 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0330: 2.0.0-alpha (ZiwKerman) for KSP 1.1 PRE-RELEASE
+	+ This is purely to test out the main code for compatibility with KSP 1.1 pre-release while I re-do all the UI stuff.
+	+ Legacy Parts are NOT included, please copy them over from 0.21.4 or (better) use Zodius Rework parts (except for wheels, they are broken in 1.1).
 * 2016-0302: 0.21.5-pre (ZiwKerman) for KSP 1.0.2 PRE-RELEASE
 	+ Replace your MagicSmokeIndustries/Plugins/InfernalRobotics.dll with this one.
 	+ Also fixes Interpolation snapping error ea high accelerations
