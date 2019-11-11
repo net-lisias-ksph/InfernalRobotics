@@ -1,5 +1,8 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0302: 0.21.5-pre (ZiwKerman) for KSP 1.0.2 PRE-RELEASE
+	+ Replace your MagicSmokeIndustries/Plugins/InfernalRobotics.dll with this one.
+	+ Also fixes Interpolation snapping error ea high accelerations
 * 2015-1111: 0.21.4 (ZiwKerman) for KSP 1.0.2
 	+ Recompile for 1.0.5
 * 2015-0626: 0.21.3 (ZiwKerman) for KSP 1.0.2
