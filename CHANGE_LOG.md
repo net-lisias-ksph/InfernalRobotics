@@ -1,5 +1,9 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0511: 2.0.3 (ZiwKerman) for KSP 1.1.2
+	+ Proper approach for handling wheel auto-struts
+	+ Fix some log spam from UI
+	+ Fix the Group name bug, where newly created groups needed to be renamed first to be properly saved in the craft.
 * 2016-0505: 2.0.2 (ZiwKerman) for KSP 1.1.2
 	+ Fix for unnecessary EC consumption for uncontrolled parts.
 * 2016-0505: 2.0.2 (ZiwKerman) for KSP 1.1.2
