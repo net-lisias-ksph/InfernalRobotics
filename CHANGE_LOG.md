@@ -1,5 +1,7 @@
 # Infernal Robotics :: Change Log
 
+* 2015-1111: 0.21.4 (ZiwKerman) for KSP 1.0.2
+	+ Recompile for 1.0.5
 * 2015-0626: 0.21.3 (ZiwKerman) for KSP 1.0.2
 	+ Bugfix release
 		- Recompile for 1.0.4
