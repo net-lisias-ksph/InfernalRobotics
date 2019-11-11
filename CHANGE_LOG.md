@@ -1,5 +1,9 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0515: 2.0.4 (ZiwKerman) for KSP 1.1.2
+	+ Fixes mirror symmetry movement direction inconsistency between SPH/VAB and Flight mode. Thanks to Auranapse
+	+ Fixes servo range not showing right after toggling in UI for rotating parts, thanks to @Mogeley on github.
+	+ More auto-struts handling fixes. Thanks to Mine_Turtle and Nimelrian
 * 2016-0511: 2.0.3 (ZiwKerman) for KSP 1.1.2
 	+ Proper approach for handling wheel auto-struts
 	+ Fix some log spam from UI
