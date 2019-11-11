@@ -1,5 +1,7 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0420: 2.0.0-beta4 (ZiwKerman) for KSP 1.1 PRE-RELEASE
+	+ No changelog provided
 * 2016-0417: 2.0.0-beta3 (ZiwKerman) for KSP 1.1 PRE-RELEASE
 	+ No changelog provided
 * 2016-0416: 2.0.0-beta2 (ZiwKerman) for KSP 1.1 PRE-RELEASE
