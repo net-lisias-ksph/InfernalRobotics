@@ -1,5 +1,8 @@
 # Infernal Robotics :: Change Log
 
+* 2019-0527: 3.0.0 (Rudolf Meier) for KSP 1.4
+	+ first release including all new parts and updated modules
+	+ [ works with KSP 1.4 and later ]
 * 2019-0519: 3.0.0-beta5 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
 	+ Beta5
 	+ adds joystick control of the servos
