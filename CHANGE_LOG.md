@@ -1,5 +1,10 @@
 # Infernal Robotics :: Change Log
 
+* 2016-1018: 2.0.6 (ZiwKerman) for KSP 1.2 compatible release PRE-RELEASE
+	+ Update for KSP 1.2
+	+ It might still have some glitches, that is why it is beta and needs more testing.
+	+ No new features, but some annoying bugs fixed in this release.
+	+ PLEASE REMEMBER TO TURN OFF AUTO-STRUTS OR PARTS WON'T MOVE
 * 2016-0709: 2.0.5 (ZiwKerman) for KSP 1.1.3
 	+ Recompile for KSP 1.1.3
 * 2016-0515: 2.0.4 (ZiwKerman) for KSP 1.1.2
