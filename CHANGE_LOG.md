@@ -1,5 +1,9 @@
 # Infernal Robotics :: Change Log
 
+* 2019-0508: 3.0.0-beta4p2 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
+	+ Beta4, Patch2
+	+ many updates and fixes
+	+ [ works with KSP 1.4 and later ]
 * 2019-0504: 3.0.0-beta4p1 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
 	+ Beta4, Patch1
 	+ minor updates and improvements in the gui
