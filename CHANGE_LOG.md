@@ -1,5 +1,13 @@
 # Infernal Robotics :: Change Log
 
+* 2015-0515: 0.21.3-rc (ZiwKerman) for KSP 1.0.2 PRE-RELEASE
+	+ New Features:
+		- Apply Symmetry button to apply servo limits to symmetry counterparts
+		- nuFAR compatibility - Infernal Robotic parts will now inform nuFar of the position changes, so it can rebuild the voxel model
+	+ Fixes:
+		- TweakScale interaction fixes for translating parts
+		- Very minor API implementation fix for IRServo.UID
+		- Preset editing is a bit more user-friendly now (values are parsed on focus change instead of every frame).
 * 2015-0506: 0.21.2 (ZiwKerman) for KSP 1.0.2
 	+ v 0.21.2 Changes
 		- Made our AppLauncher icon follow the same behaviour as when blizzy's toolbar installed and only show when there are robotic parts on the craft in flight. Editor button is still always visible.
