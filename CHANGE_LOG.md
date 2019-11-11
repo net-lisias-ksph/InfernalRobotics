@@ -1,5 +1,7 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0416: 2.0.0-beta2 (ZiwKerman) for KSP 1.1 PRE-RELEASE
+	+ Here is a quick rebuild for 1209  with a couple of minor bugs fixed.
 * 2016-0415: 2.0.0-beta (ZiwKerman) for KSP 1.1 PRE-RELEASE
 	+ REQUIRES CLEAN INSTALL (Delete old MagicSmokeIndustries Folder in your GameData folder)
 	+ Infernal Robotics 2.0 open beta release, built for KSP 1.1-pre build 1203
