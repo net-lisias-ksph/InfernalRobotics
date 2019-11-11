@@ -1,5 +1,7 @@
 # Infernal Robotics :: Change Log
 
+* 2018-0412: 3.0.0-beta3p3 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ No changelog provided
 * 2018-0410: 3.0.0-beta3p2 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
 	+ No changelog provided
 * 2018-0407: 3.0.0-beta3p1 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
