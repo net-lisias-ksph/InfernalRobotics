@@ -1,5 +1,20 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0424: 2.0.0 (ZiwKerman) for KSP 1.1
+	+ Upgrading from 0.21.x REQUIRES CLEAN INSTALL (Delete old MagicSmokeIndustries Folder in your GameData folder)
+	+ Infernal Robotics 2.0 (built for KSP 1.1 build 1230)
+	+ New Features:
+		- Redesigned UI to Unity5 UI
+		- IR Build Aid - turn on visual aid in VAB/SPH to see servo range overlay, with current and default positions and all the presets.
+		- Change servo position in editor by Ctrl-Click-Dragging the parts on the craft.
+		- Settings window to control UI scale and transparency and some other options.
+	+ Minor changes:
+		- Uncontrolled servos can be moved to position (VAB/SPH only)
+		- Servo movement in VAB/SPH now obeys speed settings for servo.
+		- Added HostPart to the API for Servo
+		- Module renamed to ModuleIRServo, but has an alias for MuMechToggle for backwards compatibility. We encourage all part makers to change the name in part.cfg at their earliest convenience.
+	+ Important notice!
+	+ Legacy Parts are now a separate download. Core of the mod is distributed partless.
 * 2016-0424: 2.0.0-rc3 (ZiwKerman) for KSP 1.1 PRE-RELEASE
 	+ In this version:
 		- IR Build Aid improvements: now shows preset positions and indicates Positive direction via line color (from orange to greenish yellow)
