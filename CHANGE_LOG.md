@@ -1,5 +1,15 @@
 # Infernal Robotics :: Change Log
 
+* 2015-0626: 0.21.3 (ZiwKerman) for KSP 1.0.2
+	+ Bugfix release
+		- Recompile for 1.0.4
+		- Fixes for tweakscale interaction for transalting IR parts
+		- Better handling of symmetry for presets and other settings.
+		- FAR compatibility: FAR is notified when the IR parts have changed their position so it can recalculate voxel model accordingly.
+		- Better input handling for all textfields, makes typing in desired values much easier.
+		- Proper handling of New button in editor.
+		- Fixes for KIS/KAS attached IR parts to function properly.
+		- Minor changes to API implementation of UID field.
 * 2015-0515: 0.21.3-rc (ZiwKerman) for KSP 1.0.2 PRE-RELEASE
 	+ New Features:
 		- Apply Symmetry button to apply servo limits to symmetry counterparts
