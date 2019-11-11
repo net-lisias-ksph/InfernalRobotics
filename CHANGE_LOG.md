@@ -1,5 +1,7 @@
 # Infernal Robotics :: Change Log
 
+* 2017-1023: 2.0.14 (ZiwKerman) for KSP 1.2 compatible release
+	+ This is just a GUI bugfix by @SpannerMonkey
 * 2017-1013: 2.0.13 (ZiwKerman) for KSP 1.2 compatible release
 	+ Just a recompile.
 * 2017-0606: 2.0.12 (ZiwKerman) for KSP 1.2 compatible release PRE-RELEASE
