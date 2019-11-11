@@ -1,5 +1,12 @@
 # Infernal Robotics :: Change Log
 
+* 2019-0504: 3.0.0-beta4p1 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
+	+ Beta4, Patch1
+	+ minor updates and improvements in the gui
+	+ fixed an initialization bug related to docking/undocking
+	+ fixed position calculation problem of uncontrolled joints
+	+ improved the locking system of the joints
+	+ [ works with KSP 1.4 and later ]
 * 2019-0501: 3.0.0-beta4 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
 	+ Beta4
 	+ major update of almost everything, but mainly of the calculation of the positions
