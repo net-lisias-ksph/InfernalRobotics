@@ -1,5 +1,7 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0709: 2.0.5 (ZiwKerman) for KSP 1.1.3
+	+ Recompile for KSP 1.1.3
 * 2016-0515: 2.0.4 (ZiwKerman) for KSP 1.1.2
 	+ Fixes mirror symmetry movement direction inconsistency between SPH/VAB and Flight mode. Thanks to Auranapse
 	+ Fixes servo range not showing right after toggling in UI for rotating parts, thanks to @Mogeley on github.
