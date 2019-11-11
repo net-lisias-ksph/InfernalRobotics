@@ -1,5 +1,8 @@
 # Infernal Robotics :: Change Log
 
+* 2016-1215: 2.0.10 (ZiwKerman) for KSP 1.2 compatible release PRE-RELEASE
+	+ Fixes bugs introduced in 2.0.9. Might still have issues, but we're getting there.
+	+ As usual, if you need parts - get them here: https://github.com/MagicSmokeIndustries/InfernalRobotics/releases/download/2.0.0/IR-LegacyParts.zip
 * 2016-1213: 2.0.9 (ZiwKerman) for KSP 1.2 compatible release PRE-RELEASE
 	+ BETA VERSION, USE WITH CAUTION
 	+ Get the parts here if you need them: https://github.com/MagicSmokeIndustries/InfernalRobotics/releases/download/2.0.0/IR-LegacyParts.zip
