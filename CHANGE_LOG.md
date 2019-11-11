@@ -1,5 +1,14 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0424: 2.0.0-rc3 (ZiwKerman) for KSP 1.1 PRE-RELEASE
+	+ In this version:
+		- IR Build Aid improvements: now shows preset positions and indicates Positive direction via line color (from orange to greenish yellow)
+		- Fixed a bug when dragging and dropping a servo to the very end of the last group did not register as group change.
+		- Made an explicit button in flight editor to return to control window.
+		- Some other cosmetic changes.
+	+ Known Issue:
+		- Uncontrolled parts (docking washer) seem to freeze in flight mode when placed in Mirror Symmetry mode. Use Radial symmetry or place them separately to avoid this bug.
+	+ Reminder: parts are not packed, use the separate link in RC1 release or use alternative packs.
 * 2016-0422: 2.0.0-rc2 (ZiwKerman) for KSP 1.1 PRE-RELEASE
 	+ Bugfixes mostly.
 * 2016-0421: 2.0.0-rc1 (ZiwKerman) for KSP 1.1 PRE-RELEASE
