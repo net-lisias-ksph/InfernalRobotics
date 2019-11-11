@@ -1,5 +1,8 @@
 # Infernal Robotics :: Change Log
 
+* 2016-1030: 2.0.7 (ZiwKerman) for KSP 1.2 compatible release PRE-RELEASE
+	+ Requires Clean-ish Install
+	+ Leave the Parts subfolder, but please delete the MagicSmokeIndustries/AssetBundles subfolder before installing.
 * 2016-1018: 2.0.6 (ZiwKerman) for KSP 1.2 compatible release PRE-RELEASE
 	+ Update for KSP 1.2
 	+ It might still have some glitches, that is why it is beta and needs more testing.
