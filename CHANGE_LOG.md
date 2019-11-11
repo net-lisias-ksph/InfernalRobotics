@@ -1,5 +1,7 @@
 # Infernal Robotics :: Change Log
 
+* 2017-0606: 2.0.12 (ZiwKerman) for KSP 1.2 compatible release PRE-RELEASE
+	+ Thanks to @matthewreiter
 * 2017-0530: 2.0.11 (ZiwKerman) for KSP 1.2 compatible release
 	+ (Almost) No code changes, just a recompile for 1.3
 	+ Turn off auto-struts, or the parts won't move in flight. If you want to use KJR, make sure you have latest version that supports IR. For more trouble shooting visit the forum page.
