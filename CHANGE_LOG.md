@@ -2,6 +2,8 @@
 
 * 2016-0505: 2.0.2 (ZiwKerman) for KSP 1.1.2
 	+ Fix for unnecessary EC consumption for uncontrolled parts.
+* 2016-0505: 2.0.2 (ZiwKerman) for KSP 1.1.2
+	+ Fix for unnecessary EC consumption for uncontrolled parts.
 * 2016-0504: 2.0.1 (ZiwKerman) for KSP 1.1.2
 	+ This small patch addresses some small UI and QoL related issues. Compiled for KSP 1.1.2
 		- UI Windows are now clamped to screen on initialisation, so you will not loose them if you change resolution or move them of the screen accidentally
