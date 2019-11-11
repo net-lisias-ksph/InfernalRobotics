@@ -1,5 +1,13 @@
 # Infernal Robotics :: Change Log
 
+* 2015-0506: 0.21.2 (ZiwKerman) for KSP 1.0.2
+	+ v 0.21.2 Changes
+		- Made our AppLauncher icon follow the same behaviour as when blizzy's toolbar installed and only show when there are robotic parts on the craft in flight. Editor button is still always visible.
+		- Fixed .version file
+		- Updated KSPAPIExtensions.dll dependency
+		- Converted Legacy parts textures to DDS
+		- Rearranged Legacy parts position in tech tree.
+		- Added support for CTT for Legacy parts.
 * 2015-0430: 0.21.1 (ZiwKerman) for KSP 1.0 compatibility
 	+ Includes hotfix for toolbar button.
 * 2015-0428: 0.00 (ZiwKerman) for KSP 0.7.3 PRE-RELEASE
