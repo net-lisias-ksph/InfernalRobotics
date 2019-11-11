@@ -1,5 +1,18 @@
 # Infernal Robotics :: Change Log
 
+* 2016-0504: 2.0.1 (ZiwKerman) for KSP 1.1.2
+	+ This small patch addresses some small UI and QoL related issues. Compiled for KSP 1.1.2
+		- UI Windows are now clamped to screen on initialisation, so you will not loose them if you change resolution or move them of the screen accidentally
+		- IR Build Aid now shows all the presets in a more clean way
+		- IR Build Aid color scheme is now more in line with IR color scheme
+		- Added option to toggle IR Build Aid for the group of servos
+		- Fixed a bug that made Settings window invisible
+		- Fixed a bug with uncontrolled hinges loosing orientation after scene change
+		- Fixes to avoid wheel auto-struts get in the way of IR moving parts
+		- Fixes for mirror symmetry parts not working. This fix might invert some Legacy parts' default movement direction, but it is easily fixed by inverting the axis where needed.
+		- Some other very minor changes.
+	+ Core zip only includes an updated version of plugin and related files and is a recommended way of updating.
+	+ Full zip also includes Legacy Parts in case you need them.
 * 2016-0424: 2.0.0 (ZiwKerman) for KSP 1.1
 	+ Upgrading from 0.21.x REQUIRES CLEAN INSTALL (Delete old MagicSmokeIndustries Folder in your GameData folder)
 	+ Infernal Robotics 2.0 (built for KSP 1.1 build 1230)
