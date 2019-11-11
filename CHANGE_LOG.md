@@ -1,5 +1,11 @@
 # Infernal Robotics :: Change Log
 
+* 2019-0611: 3.0.1 (Rudolf Meier) for KSP 1.7.1 PRE-RELEASE
+	+ using new features of 1.7.1 and its DLC
+	+ minor bugfixes
+	+ new ui
+	+ new symmetry handling
+	+ [ works with KSP 1.7.1 and later ]
 * 2019-0527: 3.0.0 (Rudolf Meier) for KSP 1.4
 	+ first release including all new parts and updated modules
 	+ [ works with KSP 1.4 and later ]
