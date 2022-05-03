@@ -1,5 +1,10 @@
 # Infernal Robotics :: Change Log
 
+* 2022-0327: 3.0.7 (Rudolf Meier) for KSP 1.12.0
+	+ cleanup
+	+ release with all basic robotic actions
+	+ special docking modules to create "walking arms" are included, but might still need some work
+	+ [ works with KSP 1.12.0 and later ]
 * 2022-0322: 3.0.6 (Rudolf Meier) for KSP 1.12.0 PRE-RELEASE
 	+ major update for 1.12
 	+ [ works with KSP 1.12.0 and later ]
