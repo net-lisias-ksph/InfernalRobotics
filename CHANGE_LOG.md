@@ -4,6 +4,10 @@
 	+ updates and improvements
 	+ has still some little issues, but it's almost the new version
 	+ [ works with KSP 1.7.2 and later ]
+* 2019-0622: 3.0.2 (Rudolf Meier) for KSP 1.7.2 PRE-RELEASE
+	+ updates and improvements
+	+ has still some little issues, but it's almost the new version
+	+ [ works with KSP 1.7.2 and later ]
 * 2019-0611: 3.0.1 (Rudolf Meier) for KSP 1.7.1 PRE-RELEASE
 	+ using new features of 1.7.1 and its DLC
 	+ minor bugfixes
