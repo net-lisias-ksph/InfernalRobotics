@@ -1,5 +1,76 @@
 # Infernal Robotics :: Change Log
 
+* 2022-0327: 3.0.7 (Rudolf Meier) for KSP 1.12.0
+	+ cleanup
+	+ release with all basic robotic actions
+	+ special docking modules to create "walking arms" are included, but might still need some work
+	+ [ works with KSP 1.12.0 and later ]
+* 2022-0322: 3.0.6 (Rudolf Meier) for KSP 1.12.0 PRE-RELEASE
+	+ major update for 1.12
+	+ [ works with KSP 1.12.0 and later ]
+* 2019-0622: 3.0.2 (Rudolf Meier) for KSP 1.7.2 PRE-RELEASE
+	+ updates and improvements
+	+ has still some little issues, but it's almost the new version
+	+ [ works with KSP 1.7.2 and later ]
+* 2019-0622: 3.0.2 (Rudolf Meier) for KSP 1.7.2 PRE-RELEASE
+	+ updates and improvements
+	+ has still some little issues, but it's almost the new version
+	+ [ works with KSP 1.7.2 and later ]
+* 2019-0611: 3.0.1 (Rudolf Meier) for KSP 1.7.1 PRE-RELEASE
+	+ using new features of 1.7.1 and its DLC
+	+ minor bugfixes
+	+ new ui
+	+ new symmetry handling
+	+ [ works with KSP 1.7.1 and later ]
+* 2019-0527: 3.0.0 (Rudolf Meier) for KSP 1.4
+	+ first release including all new parts and updated modules
+	+ [ works with KSP 1.4 and later ]
+* 2019-0519: 3.0.0-beta5 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
+	+ Beta5
+	+ adds joystick control of the servos
+	+ fixes some problems
+	+ [ works with KSP 1.4 and later ]
+* 2019-0510: 3.0.0-beta4p2b (Rudolf Meier) for KSP 1.4 PRE-RELEASE
+	+ Beta4, Patch2b
+	+ small updates
+	+ added the handling for stuck servos
+	+ [ works with KSP 1.4 and later ]
+* 2019-0508: 3.0.0-beta4p2 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
+	+ Beta4, Patch2
+	+ many updates and fixes
+	+ [ works with KSP 1.4 and later ]
+* 2019-0504: 3.0.0-beta4p1 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
+	+ Beta4, Patch1
+	+ minor updates and improvements in the gui
+	+ fixed an initialization bug related to docking/undocking
+	+ fixed position calculation problem of uncontrolled joints
+	+ improved the locking system of the joints
+	+ [ works with KSP 1.4 and later ]
+* 2019-0501: 3.0.0-beta4 (Rudolf Meier) for KSP 1.4 PRE-RELEASE
+	+ Beta4
+	+ major update of almost everything, but mainly of the calculation of the positions
+	+ [ works with KSP 1.4 and later ]
+* 2018-0502: 3.0.0-beta3p7 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ No changelog provided
+* 2018-0429: 3.0.0-beta3p6 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ No changelog provided
+* 2018-0416: 3.0.0-beta3p5 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ No changelog provided
+* 2018-0413: 3.0.0-beta3p4 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ No changelog provided
+* 2018-0412: 3.0.0-beta3p3 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ No changelog provided
+* 2018-0410: 3.0.0-beta3p2 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ No changelog provided
+* 2018-0407: 3.0.0-beta3p1 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ No changelog provided
+* 2018-0406: 3.0.0-beta3 (Rudolf Meier) for KSP 1.3.1 PRE-RELEASE
+	+ includes all features and the code is almost completely clean
+* 2018-0403: 3.0.0-beta2p1 (Rudolf Meier) for KSP 1.2.2 PRE-RELEASE
+	+ No changelog provided
+* 2018-0330: 3.0.0-beta2 (Rudolf Meier) for KSP 1.2.2 PRE-RELEASE
+	+ Beta of project "Next", almost done...
+	+ Includes the "rework" parts but not KJR. For best results use my version of KJR at version 3.4.0 or higher.
 * 2017-1023: 2.0.14 (ZiwKerman) for KSP 1.2 compatible release
 	+ This is just a GUI bugfix by @SpannerMonkey
 * 2017-1013: 2.0.13 (ZiwKerman) for KSP 1.2 compatible release
