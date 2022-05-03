@@ -1,5 +1,8 @@
 # Infernal Robotics :: Change Log
 
+* 2022-0322: 3.0.6 (Rudolf Meier) for KSP 1.12.0 PRE-RELEASE
+	+ major update for 1.12
+	+ [ works with KSP 1.12.0 and later ]
 * 2019-0622: 3.0.2 (Rudolf Meier) for KSP 1.7.2 PRE-RELEASE
 	+ updates and improvements
 	+ has still some little issues, but it's almost the new version
